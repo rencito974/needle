@@ -4,127 +4,82 @@ struct NowPlaying: View {
     @Environment(Player.self) private var player
     @Environment(\.dismiss) private var dismiss
     @Namespace private var space
-    @State private var lyrics = false
-    @State private var panel: Panel?
+    @State private var mode: Mode = .art
+    @State private var devices = false
     @State private var swipe: CGFloat = 0
 
-    private let morph = Animation.spring(response: 0.5, dampingFraction: 0.86)
-
-    enum Panel: String, Identifiable {
-        case queue, devices
-        var id: String { rawValue }
+    enum Mode {
+        case art, lyrics, queue
     }
+
+    private let morph = Animation.spring(response: 0.5, dampingFraction: 0.86)
 
     var body: some View {
         ZStack {
             Backdrop(url: player.track?.album?.images?.best(for: 300))
             VStack(spacing: 0) {
-                bar
+                grabber
                 if let track = player.track {
-                    if lyrics {
+                    switch mode {
+                    case .art:
+                        Spacer(minLength: 16)
+                        cover(track)
+                        Spacer(minLength: 16)
+                        titleRow(track)
+                    case .lyrics:
                         compact(track)
                         LyricsPanel(track: track)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .mask(fade)
                             .transition(.opacity)
-                    } else {
-                        Spacer(minLength: 10)
-                        cover(track)
-                        Spacer(minLength: 10)
-                        LyricTicker(track: track) {
-                            withAnimation(morph) { lyrics = true }
-                        }
-                        .frame(height: 50)
-                        .padding(.bottom, 14)
-                        titleRow(track)
+                    case .queue:
+                        compact(track)
+                        QueuePanel()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .transition(.opacity)
                     }
                     TimelineView(.periodic(from: .now, by: 0.5)) { context in
                         Scrubber(value: player.progress(at: context.date), total: Double(track.durationMs) / 1000) { seconds in
                             player.seek(to: seconds)
                         }
                     }
-                    .padding(.top, 18)
+                    .padding(.top, mode == .art ? 22 : 10)
                     controls
-                        .padding(.top, 12)
+                    VolumeBar()
+                        .padding(.top, 4)
                     footer
-                        .padding(.top, 16)
+                        .padding(.top, 14)
                 } else {
                     Spacer()
-                    Text("Nothing playing")
+                    Text("Not Playing")
                         .font(.title3.weight(.semibold))
                     Button("Open Spotify") { player.openSpotify() }
                         .padding(.top, 10)
                     Spacer()
                 }
             }
-            .padding(.horizontal, 26)
-            .padding(.bottom, 10)
+            .padding(.horizontal, 28)
+            .padding(.bottom, 6)
         }
         .tint(.white)
         .foregroundStyle(Color.white)
+        .environment(\.colorScheme, .dark)
         .problems()
-        .sheet(item: $panel) { which in
-            switch which {
-            case .queue:
-                QueueSheet()
-                    .environment(player)
-            case .devices:
-                DeviceSheet()
-                    .environment(player)
-            }
+        .sheet(isPresented: $devices) {
+            DeviceSheet()
+                .environment(player)
         }
     }
 
-    private var bar: some View {
-        HStack {
-            Button {
-                dismiss()
-            } label: {
-                round("chevron.down")
-            }
-            Spacer()
-            Text(source)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-                .padding(.horizontal, 8)
-            Spacer()
-            Menu {
-                if let track = player.track {
-                    Button {
-                        player.toggleLike()
-                    } label: {
-                        Label(player.liked ? "Remove from Liked Songs" : "Save to Liked Songs", systemImage: player.liked ? "heart.slash" : "heart")
-                    }
-                    if let id = track.id, let link = URL(string: "https://open.spotify.com/track/\(id)") {
-                        ShareLink(item: link) {
-                            Label("Share Song", systemImage: "square.and.arrow.up")
-                        }
-                    }
-                    Button {
-                        player.open(track.uri)
-                    } label: {
-                        Label("Open in Spotify", systemImage: "arrow.up.forward.app")
-                    }
-                }
-            } label: {
-                round("ellipsis")
-            }
-        }
-        .padding(.top, 14)
-    }
-
-    private func round(_ name: String) -> some View {
-        Image(systemName: name)
-            .font(.system(size: 15, weight: .bold))
-            .frame(width: 34, height: 34)
-            .background(Color.white.opacity(0.14), in: Circle())
-    }
-
-    private var source: String {
-        if let name = player.session?.name, !name.isEmpty {
-            return name
-        }
-        return player.track?.album?.name ?? ""
+    private var grabber: some View {
+        Capsule()
+            .fill(Color.white.opacity(0.35))
+            .frame(width: 38, height: 5)
+            .padding(.top, 10)
+            .padding(.bottom, 4)
+            .frame(maxWidth: .infinity, minHeight: 28)
+            .contentShape(Rectangle())
+            .onTapGesture { dismiss() }
     }
 
     private var fade: some View {
@@ -144,8 +99,8 @@ struct NowPlaying: View {
         Art(url: track.album?.images?.best(for: 640), radius: 10)
             .matchedGeometryEffect(id: "art", in: space)
             .layoutPriority(1)
-            .shadow(color: .black.opacity(0.45), radius: 30, y: 18)
-            .scaleEffect(player.playing ? 1 : 0.84)
+            .shadow(color: .black.opacity(0.4), radius: 28, y: 16)
+            .scaleEffect(player.playing ? 1 : 0.8)
             .animation(.spring(response: 0.5, dampingFraction: 0.72), value: player.playing)
             .offset(x: swipe)
             .rotationEffect(.degrees(Double(swipe) / 30))
@@ -169,88 +124,111 @@ struct NowPlaying: View {
 
     private func compact(_ track: Track) -> some View {
         HStack(spacing: 12) {
-            Art(url: track.album?.images?.best(for: 640), size: 58, radius: 6)
+            Art(url: track.album?.images?.best(for: 640), size: 64, radius: 6)
                 .matchedGeometryEffect(id: "art", in: space)
+                .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
             VStack(alignment: .leading, spacing: 2) {
                 Text(track.name)
                     .font(.headline)
                     .lineLimit(1)
                 Text(track.artistLine)
                     .font(.subheadline)
-                    .foregroundStyle(Color.white.opacity(0.65))
+                    .foregroundStyle(Color.white.opacity(0.6))
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
-            like(24)
+            likeCircle
+            moreMenu
         }
-        .padding(.top, 18)
-        .padding(.bottom, 6)
+        .padding(.top, 14)
+        .padding(.bottom, 8)
         .contentShape(Rectangle())
         .onTapGesture {
-            withAnimation(morph) { lyrics = false }
+            withAnimation(morph) { mode = .art }
         }
     }
 
     private func titleRow(_ track: Track) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(track.name)
-                    .font(.title2.weight(.bold))
+                    .font(.title3.weight(.semibold))
                     .lineLimit(1)
                 Text(track.artistLine)
                     .font(.title3)
-                    .foregroundStyle(Color.white.opacity(0.65))
+                    .foregroundStyle(Color.white.opacity(0.6))
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
-            like(30)
+            likeCircle
+            moreMenu
         }
     }
 
-    private func like(_ size: CGFloat) -> some View {
+    private var likeCircle: some View {
         Button {
             player.toggleLike()
         } label: {
-            Image(systemName: player.liked ? "checkmark.circle.fill" : "plus.circle")
-                .font(.system(size: size))
-                .foregroundStyle(player.liked ? Theme.amber : Color.white)
+            Image(systemName: player.liked ? "heart.fill" : "heart")
+                .font(.system(size: 14, weight: .semibold))
                 .contentTransition(.symbolEffect(.replace))
-                .frame(width: 44, height: 44)
+                .frame(width: 30, height: 30)
+                .background(Color.white.opacity(0.15), in: Circle())
         }
         .buttonStyle(Press())
         .sensoryFeedback(.success, trigger: player.liked) { _, now in now }
     }
 
+    private var moreMenu: some View {
+        Menu {
+            if let track = player.track {
+                Button {
+                    player.toggleLike()
+                } label: {
+                    Label(player.liked ? "Remove from Liked Songs" : "Add to Liked Songs", systemImage: player.liked ? "heart.slash" : "heart")
+                }
+                if let id = track.id, let link = URL(string: "https://open.spotify.com/track/\(id)") {
+                    ShareLink(item: link) {
+                        Label("Share Song", systemImage: "square.and.arrow.up")
+                    }
+                }
+                Button {
+                    devices = true
+                } label: {
+                    Label("Play on Another Device", systemImage: "hifispeaker.2")
+                }
+                Button {
+                    player.open(track.uri)
+                } label: {
+                    Label("Open in Spotify", systemImage: "arrow.up.forward.app")
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 14, weight: .bold))
+                .frame(width: 30, height: 30)
+                .background(Color.white.opacity(0.15), in: Circle())
+        }
+    }
+
     private var controls: some View {
         HStack {
-            Button {
-                if player.session != nil {
-                    player.reshuffle()
-                } else {
-                    player.toggleShuffle()
-                }
-            } label: {
-                Image(systemName: "shuffle")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(shuffleOn ? Theme.amber : Color.white.opacity(0.75))
-                    .frame(width: 44, height: 44)
-            }
             Spacer()
             Button {
                 player.previous()
             } label: {
                 Image(systemName: "backward.fill")
-                    .font(.system(size: 32))
-                    .frame(width: 60, height: 60)
+                    .font(.system(size: 34))
+                    .frame(width: 80, height: 80)
             }
             Spacer()
             Button {
                 player.togglePlay()
             } label: {
                 Image(systemName: player.playing ? "pause.fill" : "play.fill")
-                    .font(.system(size: 48))
+                    .font(.system(size: 46))
                     .contentTransition(.symbolEffect(.replace))
-                    .frame(width: 76, height: 76)
+                    .frame(width: 80, height: 80)
             }
             .sensoryFeedback(.impact(weight: .medium), trigger: player.playing)
             Spacer()
@@ -258,19 +236,10 @@ struct NowPlaying: View {
                 player.next()
             } label: {
                 Image(systemName: "forward.fill")
-                    .font(.system(size: 32))
-                    .frame(width: 60, height: 60)
+                    .font(.system(size: 34))
+                    .frame(width: 80, height: 80)
             }
             Spacer()
-            Button {
-                player.cycleRepeat()
-            } label: {
-                Image(systemName: player.state?.repeatState == "track" ? "repeat.1" : "repeat")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(repeatOn ? Theme.amber : Color.white.opacity(0.75))
-                    .contentTransition(.symbolEffect(.replace))
-                    .frame(width: 44, height: 44)
-            }
         }
         .buttonStyle(Press())
     }
@@ -278,47 +247,44 @@ struct NowPlaying: View {
     private var footer: some View {
         VStack(spacing: 10) {
             if let device = player.state?.device, device.type.lowercased() != "smartphone" {
-                Label(device.name, systemImage: deviceIcon(device.type))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.amber)
-                    .lineLimit(1)
+                Button {
+                    devices = true
+                } label: {
+                    Label("Playing on \(device.name)", systemImage: deviceIcon(device.type))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.white.opacity(0.75))
+                        .lineLimit(1)
+                }
+                .buttonStyle(.plain)
             }
             HStack {
                 Spacer()
-                foot(lyrics ? "quote.bubble.fill" : "quote.bubble", on: lyrics) {
-                    withAnimation(morph) { lyrics.toggle() }
+                toggle(mode == .lyrics ? "quote.bubble.fill" : "quote.bubble", on: mode == .lyrics) {
+                    withAnimation(morph) { mode = mode == .lyrics ? .art : .lyrics }
                 }
                 Spacer()
-                foot(deviceIcon(player.state?.device?.type), on: false) {
-                    panel = .devices
-                }
+                RoutePicker()
+                    .frame(width: 44, height: 36)
                 Spacer()
-                foot("list.bullet", on: false) {
-                    panel = .queue
+                toggle("list.bullet", on: mode == .queue) {
+                    withAnimation(morph) { mode = mode == .queue ? .art : .queue }
                 }
                 Spacer()
             }
         }
     }
 
-    private func foot(_ icon: String, on: Bool, action: @escaping () -> Void) -> some View {
+    private func toggle(_ icon: String, on: Bool, action: @escaping () -> Void) -> some View {
         Button {
             action()
         } label: {
             Image(systemName: icon)
-                .font(.system(size: 20))
-                .foregroundStyle(on ? Theme.amber : Color.white.opacity(0.75))
-                .frame(width: 48, height: 44)
+                .font(.system(size: 19, weight: .medium))
+                .foregroundStyle(Color.white.opacity(on ? 1 : 0.65))
+                .frame(width: 44, height: 36)
+                .background(Color.white.opacity(on ? 0.2 : 0), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
         }
-        .buttonStyle(Press())
-    }
-
-    private var shuffleOn: Bool {
-        player.session != nil || player.state?.shuffleState == true
-    }
-
-    private var repeatOn: Bool {
-        (player.state?.repeatState ?? "off") != "off"
+        .buttonStyle(.plain)
     }
 }
 
@@ -330,17 +296,17 @@ struct Scrubber: View {
 
     var body: some View {
         let shown = drag ?? value
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             GeometryReader { geo in
                 let fraction = total > 0 ? min(max(shown / total, 0), 1) : 0
                 ZStack(alignment: .leading) {
                     Capsule()
                         .fill(Color.white.opacity(0.2))
                     Capsule()
-                        .fill(Color.white.opacity(drag == nil ? 0.85 : 1))
+                        .fill(Color.white.opacity(drag == nil ? 0.8 : 1))
                         .frame(width: geo.size.width * CGFloat(fraction))
                 }
-                .frame(height: drag == nil ? 5 : 10)
+                .frame(height: drag == nil ? 7 : 12)
                 .frame(maxHeight: .infinity)
                 .contentShape(Rectangle())
                 .gesture(
@@ -357,55 +323,15 @@ struct Scrubber: View {
                         }
                 )
             }
-            .frame(height: 22)
+            .frame(height: 24)
             .animation(.spring(response: 0.25, dampingFraction: 0.7), value: drag == nil)
             HStack {
                 Text(clock(shown))
                 Spacer()
                 Text("-" + clock(max(total - shown, 0)))
             }
-            .font(.caption.weight(.medium).monospacedDigit())
-            .foregroundStyle(Color.white.opacity(drag == nil ? 0.55 : 0.9))
-        }
-    }
-}
-
-struct LyricTicker: View {
-    let track: Track
-    let open: () -> Void
-    @Environment(Player.self) private var player
-    @State private var lines: [Line] = []
-
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: 0.3)) { context in
-            let now = player.progress(at: context.date)
-            let index = lines.lastIndex(where: { $0.time <= now + 0.2 }) ?? -1
-            ZStack(alignment: .bottomLeading) {
-                if index >= 0 && !lines[index].text.isEmpty {
-                    Text(lines[index].text)
-                        .font(.headline.weight(.bold))
-                        .foregroundStyle(Color.white.opacity(0.88))
-                        .lineLimit(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .id(index)
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .bottom).combined(with: .opacity),
-                            removal: .move(edge: .top).combined(with: .opacity)
-                        ))
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-            .clipped()
-            .animation(.easeOut(duration: 0.35), value: index)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture { open() }
-        .task(id: track.uri) {
-            lines = []
-            let found = await LyricsStore.shared.lyrics(for: track)
-            if case .synced(let synced) = found {
-                lines = synced
-            }
+            .font(.caption2.weight(.semibold).monospacedDigit())
+            .foregroundStyle(Color.white.opacity(drag == nil ? 0.5 : 0.9))
         }
     }
 }
@@ -432,7 +358,7 @@ struct LyricsPanel: View {
                 case .instrumental:
                     empty("Instrumental")
                 case .missing:
-                    empty("No lyrics for this one")
+                    empty("Lyrics aren't available for this song")
                 }
             } else {
                 ProgressView()
@@ -449,6 +375,7 @@ struct LyricsPanel: View {
         Text(text)
             .font(.title3.weight(.semibold))
             .foregroundStyle(Color.white.opacity(0.5))
+            .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
@@ -463,10 +390,10 @@ struct SyncedLyrics: View {
             let current = lines.lastIndex(where: { $0.time <= now + 0.25 }) ?? -1
             ScrollViewReader { proxy in
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 24) {
                         ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
                             Text(line.text.isEmpty ? "♪" : line.text)
-                                .font(.system(size: 30, weight: .bold))
+                                .font(.system(size: 32, weight: .bold))
                                 .foregroundStyle(shade(index, current))
                                 .scaleEffect(index == current ? 1 : 0.97, anchor: .leading)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -480,11 +407,11 @@ struct SyncedLyrics: View {
                 }
                 .onChange(of: current) { _, value in
                     withAnimation(.spring(response: 0.6, dampingFraction: 0.9)) {
-                        proxy.scrollTo(max(value, 0), anchor: UnitPoint(x: 0.5, y: 0.35))
+                        proxy.scrollTo(max(value, 0), anchor: UnitPoint(x: 0.5, y: 0.3))
                     }
                 }
                 .onAppear {
-                    proxy.scrollTo(max(current, 0), anchor: UnitPoint(x: 0.5, y: 0.35))
+                    proxy.scrollTo(max(current, 0), anchor: UnitPoint(x: 0.5, y: 0.3))
                 }
             }
         }
@@ -494,6 +421,6 @@ struct SyncedLyrics: View {
         if index == current {
             return .white
         }
-        return Color.white.opacity(index < current ? 0.4 : 0.3)
+        return Color.white.opacity(index < current ? 0.4 : 0.28)
     }
 }

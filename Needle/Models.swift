@@ -130,6 +130,23 @@ struct TrackItem: Decodable {
     }
 }
 
+struct SavedAlbum: Decodable {
+    let album: Album?
+
+    enum Keys: String, CodingKey {
+        case album
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        album = try? c.decode(Album.self, forKey: .album)
+    }
+}
+
+struct Followed: Decodable {
+    let artists: Page<Artist>
+}
+
 struct PlaylistEntry: Decodable {
     let track: Track?
 

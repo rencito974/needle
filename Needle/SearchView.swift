@@ -9,73 +9,57 @@ struct SearchView: View {
         List {
             if let results {
                 if let tracks = results.tracks?.items, !tracks.isEmpty {
-                    Section("Songs") {
+                    Section {
                         ForEach(Array(tracks.enumerated()), id: \.offset) { _, track in
                             TrackRow(track: track)
                                 .onTapGesture { player.playTrack(track) }
                         }
+                    } header: {
+                        heading("Songs")
                     }
                 }
                 if let artists = results.artists?.items, !artists.isEmpty {
-                    Section("Artists") {
+                    Section {
                         ForEach(artists, id: \.self) { artist in
                             if let id = artist.id {
                                 NavigationLink(value: Route.artist(id)) {
-                                    HStack(spacing: 12) {
-                                        Art(url: artist.images?.best(for: 100), size: 46, radius: 23)
-                                        Text(artist.name)
-                                            .lineLimit(1)
-                                    }
+                                    row(artist.images?.best(for: 120), round: true, title: artist.name, subtitle: "Artist")
                                 }
                             }
                         }
+                    } header: {
+                        heading("Artists")
                     }
                 }
                 if let albums = results.albums?.items, !albums.isEmpty {
-                    Section("Albums") {
+                    Section {
                         ForEach(albums, id: \.self) { album in
                             if let id = album.id {
                                 NavigationLink(value: Route.album(id)) {
-                                    HStack(spacing: 12) {
-                                        Art(url: album.images?.best(for: 100), size: 46)
-                                        VStack(alignment: .leading, spacing: 3) {
-                                            Text(album.name)
-                                                .lineLimit(1)
-                                            Text((album.artists ?? []).map(\.name).joined(separator: ", "))
-                                                .font(.subheadline)
-                                                .foregroundStyle(.secondary)
-                                                .lineLimit(1)
-                                        }
-                                    }
+                                    row(album.images?.best(for: 120), round: false, title: album.name, subtitle: albumLine(album))
                                 }
                             }
                         }
+                    } header: {
+                        heading("Albums")
                     }
                 }
                 if let playlists = results.playlists?.items, !playlists.isEmpty {
-                    Section("Playlists") {
+                    Section {
                         ForEach(playlists, id: \.id) { playlist in
                             NavigationLink(value: Route.playlist(playlist)) {
-                                HStack(spacing: 12) {
-                                    Art(url: playlist.images?.best(for: 100), size: 46)
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(playlist.name)
-                                            .lineLimit(1)
-                                        Text(playlist.owner.displayName ?? playlist.owner.id)
-                                            .font(.subheadline)
-                                            .foregroundStyle(.secondary)
-                                            .lineLimit(1)
-                                    }
-                                }
+                                row(playlist.images?.best(for: 120), round: false, title: playlist.name, subtitle: playlistLine(playlist))
                             }
                         }
+                    } header: {
+                        heading("Playlists")
                     }
                 }
             }
         }
         .listStyle(.plain)
         .navigationTitle("Search")
-        .searchable(text: $text, placement: .navigationBarDrawer(displayMode: .always), prompt: "Songs, artists, albums")
+        .searchable(text: $text, placement: .navigationBarDrawer(displayMode: .always), prompt: "Artists, Songs, Albums and More")
         .autocorrectionDisabled()
         .task(id: text) {
             let query = text.trimmingCharacters(in: .whitespaces)
@@ -90,6 +74,38 @@ struct SearchView: View {
             }
         }
     }
+
+    private func albumLine(_ album: Album) -> String {
+        let names = (album.artists ?? []).map(\.name).joined(separator: ", ")
+        return "Album · \(names)"
+    }
+
+    private func playlistLine(_ playlist: Playlist) -> String {
+        let owner = playlist.owner.displayName ?? playlist.owner.id
+        return "Playlist · \(owner)"
+    }
+
+    private func heading(_ text: String) -> some View {
+        Text(text)
+            .font(.title3.bold())
+            .foregroundStyle(Color.primary)
+            .textCase(nil)
+    }
+
+    private func row(_ image: String?, round: Bool, title: String, subtitle: String) -> some View {
+        HStack(spacing: 12) {
+            Art(url: image, size: 48, radius: round ? 24 : 5)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.vertical, 2)
+    }
 }
 
 struct ArtistView: View {
@@ -99,46 +115,15 @@ struct ArtistView: View {
     @State private var albums: [Album] = []
 
     var body: some View {
-        List {
-            VStack(alignment: .leading, spacing: 16) {
-                Art(url: artist?.images?.best(for: 300), size: 140, radius: 70)
-                Text(artist?.name ?? "")
-                    .font(.title.bold())
-                Button {
-                    if let artist, let uri = artist.uri {
-                        player.playContext(uri, at: nil, fallback: [], name: artist.name)
-                    }
-                } label: {
-                    Label("Play", systemImage: "play.fill")
-                        .font(.headline)
-                        .foregroundStyle(Color.black)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle(radius: 10))
-                .controlSize(.large)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                hero
+                shelf("Albums", albums.filter { ($0.albumType ?? "album") == "album" })
+                shelf("Singles & EPs", albums.filter { ($0.albumType ?? "album") != "album" })
             }
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 18, trailing: 20))
-
-            ForEach(albums, id: \.self) { album in
-                if let albumID = album.id {
-                    NavigationLink(value: Route.album(albumID)) {
-                        HStack(spacing: 12) {
-                            Art(url: album.images?.best(for: 120), size: 52)
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(album.name)
-                                    .lineLimit(1)
-                                Text(line(album))
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-            }
+            .padding(.bottom, 24)
         }
-        .listStyle(.plain)
+        .ignoresSafeArea(edges: .top)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             guard artist == nil else { return }
@@ -147,9 +132,58 @@ struct ArtistView: View {
         }
     }
 
-    private func line(_ album: Album) -> String {
-        let year = String((album.releaseDate ?? "").prefix(4))
-        let kind = (album.albumType ?? "").capitalized
-        return [year, kind].filter { !$0.isEmpty }.joined(separator: " · ")
+    private var hero: some View {
+        Art(url: artist?.images?.best(for: 640), radius: 0)
+            .overlay {
+                LinearGradient(colors: [.clear, .clear, Color.black.opacity(0.6)], startPoint: .top, endPoint: .bottom)
+            }
+            .overlay(alignment: .bottomLeading) {
+                HStack(alignment: .bottom, spacing: 12) {
+                    Text(artist?.name ?? "")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundStyle(Color.white)
+                        .lineLimit(2)
+                    Spacer(minLength: 0)
+                    Button {
+                        if let artist, let uri = artist.uri {
+                            player.playContext(uri, at: nil, fallback: [], name: artist.name)
+                        }
+                    } label: {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(Color.white)
+                            .frame(width: 50, height: 50)
+                            .background(Theme.accent, in: Circle())
+                    }
+                    .buttonStyle(Press())
+                }
+                .padding(20)
+            }
+    }
+
+    @ViewBuilder
+    private func shelf(_ title: String, _ items: [Album]) -> some View {
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(title)
+                    .font(.title2.bold())
+                    .padding(.horizontal, 20)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(alignment: .top, spacing: 14) {
+                        ForEach(items, id: \.self) { album in
+                            if let albumID = album.id {
+                                NavigationLink(value: Route.album(albumID)) {
+                                    Card(title: album.name, subtitle: String((album.releaseDate ?? "").prefix(4)), image: album.images?.best(for: 300))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .scrollTargetLayout()
+                }
+                .scrollTargetBehavior(.viewAligned)
+                .contentMargins(.horizontal, 20, for: .scrollContent)
+            }
+        }
     }
 }

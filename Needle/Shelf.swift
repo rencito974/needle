@@ -16,10 +16,30 @@ final class Shelf {
     private(set) var playlists: [Playlist] = []
     private(set) var recent: [Track] = []
     private(set) var shortcuts: [Shortcut] = []
+    private(set) var albums: [Album] = []
+    private(set) var artists: [Artist] = []
     private(set) var loaded = false
+    @ObservationIgnored private var albumsLoaded = false
+    @ObservationIgnored private var artistsLoaded = false
 
     init(api: Spotify) {
         self.api = api
+    }
+
+    func loadAlbums(force: Bool = false) async {
+        guard force || !albumsLoaded else { return }
+        var fresh: [Album] = []
+        try? await api.savedAlbums { fresh += $0 }
+        albums = fresh
+        albumsLoaded = true
+    }
+
+    func loadArtists(force: Bool = false) async {
+        guard force || !artistsLoaded else { return }
+        if let found = try? await api.followedArtists() {
+            artists = found.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        }
+        artistsLoaded = true
     }
 
     func load(force: Bool = false) async {

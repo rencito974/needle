@@ -20,15 +20,15 @@ struct NeedleApp: App {
                 .environment(auth)
                 .environment(player)
                 .environment(shelf)
-                .preferredColorScheme(.dark)
-                .tint(Theme.amber)
+                .tint(Theme.accent)
         }
     }
 }
 
 enum Theme {
-    static let ground = Color(red: 0.055, green: 0.055, blue: 0.063)
-    static let amber = Color(red: 0.96, green: 0.70, blue: 0.32)
+    static let accent = Color(red: 0.98, green: 0.18, blue: 0.29)
+    static let deep = Color(red: 0.70, green: 0.05, blue: 0.27)
+    static let ground = Color(red: 0.07, green: 0.07, blue: 0.08)
 }
 
 struct Root: View {
@@ -63,18 +63,19 @@ struct SignIn: View {
     @State private var failed: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(spacing: 0) {
             Spacer()
             Record()
-                .frame(width: 96, height: 96)
-                .padding(.bottom, 28)
+                .frame(width: 128, height: 128)
+                .shadow(color: .black.opacity(0.25), radius: 20, y: 10)
             Text("Needle")
-                .font(.system(size: 48, weight: .bold, design: .rounded))
+                .font(.system(size: 40, weight: .bold))
+                .padding(.top, 28)
             Spacer()
             if let failed {
                 Text(failed)
                     .font(.footnote)
-                    .foregroundStyle(Color.red.opacity(0.9))
+                    .foregroundStyle(Color.red)
                     .padding(.bottom, 14)
             }
             Button {
@@ -82,19 +83,17 @@ struct SignIn: View {
             } label: {
                 Text(busy ? "Connecting" : "Connect Spotify")
                     .font(.headline)
-                    .foregroundStyle(Color.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
+                    .foregroundStyle(Color.white)
+                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.roundedRectangle(radius: 10))
-            .controlSize(.large)
+            .buttonStyle(.plain)
             .disabled(busy || Config.clientID.isEmpty)
         }
         .padding(.horizontal, 24)
-        .padding(.bottom, 20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(Theme.ground)
+        .padding(.bottom, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
     }
 
     private func connect() {
@@ -117,18 +116,22 @@ struct Record: View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
             ZStack {
-                Circle().fill(Color(white: 0.11))
-                ForEach(1..<6) { ring in
+                RoundedRectangle(cornerRadius: side * 0.22, style: .continuous)
+                    .fill(Color(white: 0.08))
+                Circle()
+                    .fill(Color(white: 0.13))
+                    .padding(side * 0.1)
+                ForEach(1..<5) { ring in
                     Circle()
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
-                        .padding(side * (0.06 + CGFloat(ring) * 0.045))
+                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                        .padding(side * (0.13 + CGFloat(ring) * 0.045))
                 }
                 Circle()
-                    .fill(Theme.amber)
-                    .frame(width: side * 0.3, height: side * 0.3)
+                    .fill(Theme.accent)
+                    .frame(width: side * 0.26, height: side * 0.26)
                 Circle()
-                    .fill(Color(white: 0.11))
-                    .frame(width: side * 0.05, height: side * 0.05)
+                    .fill(Color(white: 0.08))
+                    .frame(width: side * 0.04, height: side * 0.04)
             }
             .frame(width: side, height: side)
         }

@@ -13,4 +13,4 @@ A Spotify client for iPhone with a real shuffle, a queue you can edit, synced ly
 
 The Xcode project is generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen) from `project.yml`, so there is no `.xcodeproj` in the repo. On a Mac: `xcodegen generate`, then open `Needle.xcodeproj`.
 
-Lyrics come from [LRCLIB](https://lrclib.net).
+Lyrics come from [LRCLIB](https://lrclib.net). Spotify's Web API only lists the songs of playlists you own, so playlists made by other people are read from Spotify's public embed page, which shows their first 100 songs; playing them still goes through the full playlist.

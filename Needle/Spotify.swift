@@ -179,6 +179,17 @@ final class Spotify {
         }
     }
 
+    func savedAlbums(each: ([Album]) -> Void) async throws {
+        try await all("/me/albums") { (items: [SavedAlbum]) in
+            each(items.compactMap(\.album))
+        }
+    }
+
+    func followedArtists() async throws -> [Artist] {
+        let reply: Followed = try await get("/me/following", query: ["type": "artist", "limit": "50"])
+        return reply.artists.items
+    }
+
     func album(_ id: String) async throws -> AlbumPage {
         try await get("/albums/\(id)")
     }

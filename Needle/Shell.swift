@@ -5,6 +5,9 @@ enum Route: Hashable {
     case playlist(Playlist)
     case album(String)
     case artist(String)
+    case playlists
+    case albums
+    case artists
 }
 
 extension View {
@@ -13,7 +16,13 @@ extension View {
             switch route {
             case .artist(let id):
                 ArtistView(id: id)
-            default:
+            case .playlists:
+                PlaylistsView()
+            case .albums:
+                AlbumsView()
+            case .artists:
+                ArtistsView()
+            case .liked, .playlist, .album:
                 TrackList(route: route)
             }
         }
@@ -30,23 +39,12 @@ struct Shell: View {
 
     var body: some View {
         TabView {
-            NavigationStack {
-                HomeView().routes()
-            }
-            .safeAreaInset(edge: .bottom) { mini }
-            .tabItem { Label("Home", systemImage: "house.fill") }
-
-            NavigationStack {
-                SearchView().routes()
-            }
-            .safeAreaInset(edge: .bottom) { mini }
-            .tabItem { Label("Search", systemImage: "magnifyingglass") }
-
-            NavigationStack {
-                LibraryView().routes()
-            }
-            .safeAreaInset(edge: .bottom) { mini }
-            .tabItem { Label("Library", systemImage: "books.vertical.fill") }
+            stack(HomeView())
+                .tabItem { Label("Home", systemImage: "house.fill") }
+            stack(LibraryView())
+                .tabItem { Label("Library", systemImage: "square.stack.fill") }
+            stack(SearchView())
+                .tabItem { Label("Search", systemImage: "magnifyingglass") }
         }
         .problems()
         .sheet(isPresented: $expanded) {
@@ -55,6 +53,13 @@ struct Shell: View {
                 .presentationDragIndicator(.hidden)
         }
         .task { await player.loadUser() }
+    }
+
+    private func stack<Content: View>(_ content: Content) -> some View {
+        NavigationStack {
+            content.routes()
+        }
+        .safeAreaInset(edge: .bottom) { mini }
     }
 
     @ViewBuilder private var mini: some View {
@@ -75,7 +80,7 @@ struct Problems: ViewModifier {
                         .font(.footnote.weight(.medium))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .padding(.top, 6)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
@@ -87,65 +92,44 @@ struct Problems: ViewModifier {
 struct MiniPlayer: View {
     @Environment(Player.self) private var player
     let open: () -> Void
-    @State private var tint = Color(white: 0.16)
 
     var body: some View {
         if let track = player.track {
-            HStack(spacing: 11) {
-                Art(url: track.album?.images?.best(for: 100), size: 40, radius: 6)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(track.name)
-                        .font(.subheadline.weight(.semibold))
-                    Text(track.artistLine)
-                        .font(.caption)
-                        .foregroundStyle(Color.white.opacity(0.7))
-                }
-                .lineLimit(1)
-                Spacer(minLength: 6)
-                Button {
-                    player.toggleLike()
-                } label: {
-                    Image(systemName: player.liked ? "checkmark.circle.fill" : "plus.circle")
-                        .font(.system(size: 22))
-                        .foregroundStyle(player.liked ? Theme.amber : Color.white)
-                        .contentTransition(.symbolEffect(.replace))
-                        .frame(width: 36, height: 40)
-                }
+            HStack(spacing: 12) {
+                Art(url: track.album?.images?.best(for: 100), size: 44, radius: 8)
+                    .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                Text(track.name)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                Spacer(minLength: 8)
                 Button {
                     player.togglePlay()
                 } label: {
                     Image(systemName: player.playing ? "pause.fill" : "play.fill")
-                        .font(.system(size: 22))
+                        .font(.system(size: 21))
                         .contentTransition(.symbolEffect(.replace))
-                        .frame(width: 40, height: 40)
+                        .frame(width: 38, height: 38)
+                }
+                Button {
+                    player.next()
+                } label: {
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 21))
+                        .frame(width: 38, height: 38)
                 }
             }
             .buttonStyle(Press())
-            .foregroundStyle(Color.white)
+            .foregroundStyle(Color.primary)
             .padding(.leading, 8)
-            .padding(.trailing, 6)
+            .padding(.trailing, 10)
             .padding(.vertical, 8)
-            .background {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(tint)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             }
-            .overlay(alignment: .bottom) {
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    let total = max(Double(track.durationMs) / 1000, 1)
-                    let done = min(player.progress(at: context.date) / total, 1)
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(Color.white.opacity(0.18))
-                            Capsule().fill(Color.white).frame(width: geo.size.width * CGFloat(done))
-                        }
-                    }
-                }
-                .frame(height: 2)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 2)
-            }
-            .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
-            .padding(.horizontal, 8)
+            .shadow(color: .black.opacity(0.16), radius: 16, y: 6)
+            .padding(.horizontal, 10)
             .padding(.bottom, 6)
             .contentShape(Rectangle())
             .onTapGesture { open() }
@@ -163,14 +147,21 @@ struct MiniPlayer: View {
                         }
                     }
             )
-            .task(id: track.album?.images?.best(for: 64)) {
-                guard let url = track.album?.images?.best(for: 64),
-                      let color = await Artwork.shared.tint(url) else {
-                    return
-                }
-                withAnimation(.easeInOut(duration: 0.5)) { tint = color }
-            }
         }
+    }
+}
+
+struct TrackArt: View {
+    let track: Track
+    var size: CGFloat = 48
+    @State private var fallback: String?
+
+    var body: some View {
+        Art(url: track.album?.images?.best(for: 100) ?? fallback, size: size, radius: 5)
+            .task(id: track.uri) {
+                guard track.album == nil, let id = track.id else { return }
+                fallback = await Embed.thumbnail(id)
+            }
     }
 }
 
@@ -185,42 +176,44 @@ struct TrackRow: View {
         let current = player.track?.uri == track.uri
         HStack(spacing: 12) {
             if art {
-                Art(url: track.album?.images?.best(for: 100), size: 48, radius: 4)
+                TrackArt(track: track)
                     .overlay {
                         if current {
                             ZStack {
-                                Color.black.opacity(0.45)
-                                Bars(active: player.playing)
+                                Color.black.opacity(0.4)
+                                Bars(active: player.playing, tint: .white)
                             }
-                            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
                         }
                     }
             } else if let number {
                 ZStack {
                     if current {
-                        Bars(active: player.playing)
+                        Bars(active: player.playing, tint: Theme.accent)
                     } else {
                         Text("\(number)")
-                            .font(.subheadline.monospacedDigit())
+                            .font(.body.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
                 }
-                .frame(width: 26)
+                .frame(width: 28)
             }
-            VStack(alignment: .leading, spacing: 3) {
-                Text(track.name)
-                    .foregroundStyle(current ? Theme.amber : Color.primary)
-                    .lineLimit(1)
-                HStack(spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    Text(track.name)
+                        .lineLimit(1)
                     if track.explicit == true {
                         Image(systemName: "e.square.fill")
-                            .font(.caption2)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
+                }
+                if art {
                     Text(track.artistLine)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
             if menu {
@@ -232,55 +225,101 @@ struct TrackRow: View {
                     }
                     if let id = track.id, let link = URL(string: "https://open.spotify.com/track/\(id)") {
                         ShareLink(item: link) {
-                            Label("Share", systemImage: "square.and.arrow.up")
+                            Label("Share Song", systemImage: "square.and.arrow.up")
                         }
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 34, height: 44)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.primary)
+                        .frame(width: 36, height: 44)
                         .contentShape(Rectangle())
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, art ? 6 : 11)
         .contentShape(Rectangle())
     }
 }
 
 struct Bars: View {
     let active: Bool
+    let tint: Color
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1 / 24, paused: !active)) { context in
-            let time = context.date.timeIntervalSinceReferenceDate
+            let time: Double = context.date.timeIntervalSinceReferenceDate
             HStack(alignment: .bottom, spacing: 2) {
                 ForEach(0..<3) { bar in
-                    let wave = abs(sin(time * (4.6 + Double(bar) * 1.9) + Double(bar) * 1.3))
                     RoundedRectangle(cornerRadius: 1)
-                        .frame(width: 3, height: CGFloat(active ? 3 + 10 * wave : 3))
+                        .frame(width: 3, height: height(bar, time))
                 }
             }
             .frame(width: 13, height: 13, alignment: .bottom)
         }
-        .foregroundStyle(Theme.amber)
+        .foregroundStyle(tint)
+    }
+
+    private func height(_ bar: Int, _ time: Double) -> CGFloat {
+        guard active else { return 3 }
+        let index = Double(bar)
+        let speed: Double = 4.6 + index * 1.9
+        let phase: Double = time * speed + index * 1.3
+        let wave: Double = abs(sin(phase))
+        return CGFloat(3 + 10 * wave)
     }
 }
 
 struct LikedTile: View {
-    var size: CGFloat = 52
-    var radius: CGFloat = 4
+    var size: CGFloat?
+    var radius: CGFloat = 5
 
     var body: some View {
         RoundedRectangle(cornerRadius: radius, style: .continuous)
-            .fill(Theme.amber.opacity(0.18))
+            .fill(LinearGradient(colors: [Theme.accent, Theme.deep], startPoint: .topLeading, endPoint: .bottomTrailing))
             .overlay {
                 Image(systemName: "heart.fill")
-                    .font(.system(size: size * 0.36))
-                    .foregroundStyle(Theme.amber)
+                    .font(.system(size: (size ?? 140) * 0.34))
+                    .foregroundStyle(Color.white)
             }
             .frame(width: size, height: size)
+            .aspectRatio(1, contentMode: .fit)
+    }
+}
+
+struct Card: View {
+    let title: String
+    let subtitle: String
+    let image: String?
+    var liked = false
+    var round = false
+    var size: CGFloat? = 160
+
+    var body: some View {
+        VStack(alignment: round ? .center : .leading, spacing: 7) {
+            Group {
+                if liked {
+                    LikedTile(size: size, radius: 8)
+                } else {
+                    Art(url: image, size: size, radius: round ? 500 : 8)
+                }
+            }
+            .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+            VStack(alignment: round ? .center : .leading, spacing: 1) {
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.primary)
+                    .lineLimit(1)
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .frame(width: size, alignment: round ? .center : .leading)
+        .contentShape(Rectangle())
     }
 }
 
@@ -290,7 +329,7 @@ struct Press: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.86 : 1)
             .background {
                 Circle()
-                    .fill(Color.white.opacity(configuration.isPressed ? 0.14 : 0))
+                    .fill(Color.primary.opacity(configuration.isPressed ? 0.1 : 0))
                     .padding(-6)
             }
             .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
