@@ -1,0 +1,52 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          xcodebuild -version
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -project Needle.xcodeproj \
+            -target Needle \
+            -configuration Release \
+            -sdk iphoneos \
+            SYMROOT="$PWD/build" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package
+        run: |
+          mkdir -p out/Payload
+          cp -R build/Release-iphoneos/Needle.app out/Payload/
+          cd out && zip -qry Needle.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Needle
+          path: out/Needle.ipa
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view latest >/dev/null 2>&1 || gh release create latest --title "Latest build" --notes "Unsigned. Sign it with your certificate before installing."
+          gh release upload latest out/Needle.ipa --clobber
