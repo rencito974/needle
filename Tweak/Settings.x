@@ -250,6 +250,15 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     if (row.kind == NeedleRowButton && row.action) row.action();
 }
 
++ (void)_needleLongPress:(UILongPressGestureRecognizer *)g {
+    if (g.state == UIGestureRecognizerStateBegan) {
+        UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+        [fb impactOccurred];
+        extern void NeedleOpenSettings(void);
+        NeedleOpenSettings();
+    }
+}
+
 @end
 
 static UIViewController *_NeedleTopVC(void) {
@@ -290,16 +299,6 @@ void NeedleOpenSettings(void) {
     lp.minimumPressDuration = 0.6;
     [self addGestureRecognizer:lp];
     objc_setAssociatedObject(self, &_lpKey, lp, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
-%end
-
-%hook NeedleSettingsViewController
-+ (void)_needleLongPress:(UILongPressGestureRecognizer *)g {
-    if (g.state == UIGestureRecognizerStateBegan) {
-        UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
-        [fb impactOccurred];
-        NeedleOpenSettings();
-    }
 }
 %end
 
