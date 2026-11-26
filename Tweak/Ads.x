@@ -36,7 +36,6 @@ static BOOL NeedleAdBlock(void) { return NeedlePrefBool(@"BlockAds", YES); }
         if ([key isEqualToString:@"audio-ads-enabled"]) return NO;
         if ([key isEqualToString:@"video-ads-enabled"]) return NO;
         if ([key isEqualToString:@"display-ads-enabled"]) return NO;
-        if ([key isEqualToString:@"audio-skip-enabled"]) return YES;
     }
     return %orig;
 }

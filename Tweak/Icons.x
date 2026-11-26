@@ -1,4 +1,5 @@
 #import <UIKit/UIKit.h>
+#import <CoreImage/CoreImage.h>
 
 extern UIColor *NeedleCurrentColor(void);
 
@@ -69,51 +70,110 @@ extern UIColor *NeedleCurrentColor(void);
 
 - (NSInteger)collectionView:(UICollectionView *)v numberOfItemsInSection:(NSInteger)s { return self.icons.count; }
 
+- (UIImage *)realSpotifyIcon {
+    static UIImage *cached = nil;
+    if (cached) return cached;
+    NSArray *tryNames = @[@"AppIcon60x60", @"AppIcon60x60@3x", @"AppIcon", @"Icon", @"spotify-logo", @"SpotifyIcon"];
+    for (NSString *name in tryNames) {
+        UIImage *img = [UIImage imageNamed:name];
+        if (img) { cached = img; return img; }
+    }
+    NSString *bp = [[NSBundle mainBundle] bundlePath];
+    NSArray *tryFiles = @[@"AppIcon60x60@3x.png", @"AppIcon60x60@2x.png", @"icon.png"];
+    for (NSString *f in tryFiles) {
+        UIImage *img = [UIImage imageWithContentsOfFile:[bp stringByAppendingPathComponent:f]];
+        if (img) { cached = img; return img; }
+    }
+    NSDictionary *info = [[NSBundle mainBundle] infoDictionary];
+    NSArray *primary = info[@"CFBundleIcons"][@"CFBundlePrimaryIcon"][@"CFBundleIconFiles"];
+    for (NSString *f in primary) {
+        UIImage *img = [UIImage imageNamed:f];
+        if (img) { cached = img; return img; }
+        NSString *path = [bp stringByAppendingPathComponent:[f stringByAppendingString:@"@3x.png"]];
+        img = [UIImage imageWithContentsOfFile:path];
+        if (img) { cached = img; return img; }
+    }
+    return nil;
+}
+
+- (UIImage *)recoloredIcon:(UIImage *)src withTint:(UIColor *)tint {
+    if (!src || !tint) return src;
+    CGSize size = src.size;
+    UIGraphicsImageRendererFormat *fmt = [UIGraphicsImageRendererFormat defaultFormat];
+    fmt.scale = src.scale ?: 2.0;
+    fmt.opaque = YES;
+    UIGraphicsImageRenderer *r = [[UIGraphicsImageRenderer alloc] initWithSize:size format:fmt];
+    return [r imageWithActions:^(UIGraphicsImageRendererContext *ctx) {
+        [tint setFill];
+        UIRectFill(CGRectMake(0, 0, size.width, size.height));
+        CIImage *input = [CIImage imageWithCGImage:src.CGImage];
+        CIFilter *inv = [CIFilter filterWithName:@"CIColorInvert"];
+        [inv setValue:input forKey:kCIInputImageKey];
+        CIFilter *mono = [CIFilter filterWithName:@"CIColorMonochrome"];
+        [mono setValue:inv.outputImage forKey:kCIInputImageKey];
+        [mono setValue:[CIColor colorWithRed:1 green:1 blue:1] forKey:@"inputColor"];
+        [mono setValue:@1.0 forKey:@"inputIntensity"];
+        CIContext *cctx = [CIContext contextWithOptions:nil];
+        CGImageRef mask = [cctx createCGImage:mono.outputImage fromRect:[mono.outputImage extent]];
+        if (mask) {
+            CGContextRef gctx = UIGraphicsGetCurrentContext();
+            CGFloat inset = size.width * 0.18;
+            CGRect d = CGRectMake(inset, inset, size.width - inset * 2, size.height - inset * 2);
+            CGContextSaveGState(gctx);
+            CGContextTranslateCTM(gctx, 0, size.height);
+            CGContextScaleCTM(gctx, 1, -1);
+            CGRect flipped = CGRectMake(d.origin.x, size.height - d.origin.y - d.size.height, d.size.width, d.size.height);
+            CGContextClipToMask(gctx, flipped, mask);
+            CGFloat r2, g2, b2;
+            [tint getRed:&r2 green:&g2 blue:&b2 alpha:NULL];
+            BOOL darkBg = (r2 + g2 + b2) < 1.5;
+            CGContextSetFillColorWithColor(gctx, darkBg ? [UIColor whiteColor].CGColor : [UIColor blackColor].CGColor);
+            CGContextFillRect(gctx, flipped);
+            CGContextRestoreGState(gctx);
+            CGImageRelease(mask);
+        }
+    }];
+}
+
 - (UICollectionViewCell *)collectionView:(UICollectionView *)v cellForItemAtIndexPath:(NSIndexPath *)ip {
     UICollectionViewCell *cell = [v dequeueReusableCellWithReuseIdentifier:@"c" forIndexPath:ip];
     for (UIView *sub in [cell.contentView.subviews copy]) [sub removeFromSuperview];
+    for (CALayer *layer in [cell.contentView.layer.sublayers copy]) [layer removeFromSuperlayer];
     NSDictionary *icon = self.icons[ip.item];
     CGFloat cellW = cell.bounds.size.width;
 
-    UIView *tile = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cellW, cellW)];
-    tile.backgroundColor = icon[@"color"];
-    tile.layer.cornerRadius = cellW * 0.22;
-    tile.layer.shadowColor = ((UIColor *)icon[@"color"]).CGColor;
-    tile.layer.shadowOffset = CGSizeMake(0, 6);
-    tile.layer.shadowRadius = 14;
-    tile.layer.shadowOpacity = 0.5;
+    UIImage *real = [self realSpotifyIcon];
+    UIImageView *iv = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, cellW, cellW)];
+    iv.layer.cornerRadius = cellW * 0.235;
+    iv.layer.masksToBounds = YES;
+    iv.contentMode = UIViewContentModeScaleAspectFill;
 
-    UIColor *tileColor = icon[@"color"];
-    CGFloat rr, gg, bb;
-    [tileColor getRed:&rr green:&gg blue:&bb alpha:NULL];
-    BOOL dark = (rr + gg + bb) < 1.5;
-    UIColor *mark = dark ? [UIColor whiteColor] : [UIColor blackColor];
-
-    tile.layer.cornerRadius = cellW * 0.235;
-
-    CGFloat cx = cellW / 2;
-    CGFloat cy = cellW * 0.72;
-    CGFloat lineW = cellW * 0.095;
-
-    CGFloat radii[3] = { cellW * 0.42, cellW * 0.30, cellW * 0.18 };
-
-    for (NSInteger i = 0; i < 3; i++) {
-        CGFloat radius = radii[i];
-        CAShapeLayer *arc = [CAShapeLayer layer];
-        UIBezierPath *p = [UIBezierPath bezierPathWithArcCenter:CGPointMake(cx, cy)
-            radius:radius
-            startAngle:M_PI
-            endAngle:0
-            clockwise:YES];
-        arc.path = p.CGPath;
-        arc.strokeColor = mark.CGColor;
-        arc.fillColor = [UIColor clearColor].CGColor;
-        arc.lineWidth = lineW - i * 0.6;
-        arc.lineCap = kCALineCapRound;
-        [tile.layer addSublayer:arc];
+    if (real && ip.item == 0) {
+        iv.image = real;
+        iv.backgroundColor = [UIColor clearColor];
+    } else if (real) {
+        UIImage *recolored = [self recoloredIcon:real withTint:icon[@"color"]];
+        iv.image = recolored;
+    } else {
+        iv.backgroundColor = icon[@"color"];
     }
 
-    [cell.contentView addSubview:tile];
+    iv.layer.shadowColor = ((UIColor *)icon[@"color"]).CGColor;
+    iv.layer.shadowOffset = CGSizeMake(0, 6);
+    iv.layer.shadowRadius = 14;
+    iv.layer.shadowOpacity = 0.5;
+    iv.layer.masksToBounds = NO;
+
+    UIView *content = iv;
+    if (iv.layer.shadowRadius > 0) {
+        UIView *wrap = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cellW, cellW)];
+        [wrap addSubview:iv];
+        content = wrap;
+    }
+    [cell.contentView addSubview:content];
+
+    UIBezierPath *shadowPath = [UIBezierPath bezierPathWithRoundedRect:iv.bounds cornerRadius:cellW * 0.235];
+    iv.layer.shadowPath = shadowPath.CGPath;
 
     UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(0, cellW + 8, cellW, 20)];
     lbl.text = icon[@"name"];
@@ -124,8 +184,8 @@ extern UIColor *NeedleCurrentColor(void);
 
     NSString *current = [[UIApplication sharedApplication] alternateIconName] ?: @"";
     if ([current isEqualToString:icon[@"key"]]) {
-        tile.layer.borderWidth = 3;
-        tile.layer.borderColor = [UIColor whiteColor].CGColor;
+        iv.layer.borderWidth = 3;
+        iv.layer.borderColor = [UIColor whiteColor].CGColor;
     }
     return cell;
 }

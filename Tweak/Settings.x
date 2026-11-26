@@ -86,18 +86,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 
 - (void)loadView {
     UIView *root = [[UIView alloc] initWithFrame:UIScreen.mainScreen.bounds];
-    root.backgroundColor = [UIColor colorWithWhite:0.03 alpha:1.0];
-    self.bgLayer = [CAGradientLayer layer];
-    UIColor *accent = NeedleCurrentColor();
-    UIColor *top = [accent colorWithAlphaComponent:0.45];
-    UIColor *mid = [accent colorWithAlphaComponent:0.12];
-    UIColor *bot = [UIColor colorWithWhite:0.03 alpha:1.0];
-    self.bgLayer.colors = @[(id)top.CGColor, (id)mid.CGColor, (id)bot.CGColor];
-    self.bgLayer.locations = @[@0.0, @0.25, @0.55];
-    self.bgLayer.startPoint = CGPointMake(0.5, 0.0);
-    self.bgLayer.endPoint = CGPointMake(0.5, 1.0);
-    self.bgLayer.frame = root.bounds;
-    [root.layer insertSublayer:self.bgLayer atIndex:0];
+    root.backgroundColor = [UIColor blackColor];
     self.view = root;
 }
 
@@ -106,56 +95,44 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     [self buildModel];
 
     CGFloat w = self.view.bounds.size.width;
-    CGFloat headerH = 180;
+    CGFloat headerH = 100;
     UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, headerH)];
     header.autoresizingMask = UIViewAutoresizingFlexibleWidth;
 
     UIButton *close = [UIButton buttonWithType:UIButtonTypeSystem];
-    close.frame = CGRectMake(w - 56, 58, 36, 36);
-    close.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
-    close.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.12];
-    close.layer.cornerRadius = 18;
-    [close setImage:[UIImage systemImageNamed:@"xmark"
-        withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
+    close.frame = CGRectMake(16, 58, 32, 32);
+    close.autoresizingMask = UIViewAutoresizingFlexibleRightMargin;
+    [close setImage:[UIImage systemImageNamed:@"chevron.down"
+        withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:16 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
     close.tintColor = [UIColor whiteColor];
     [close addTarget:self action:@selector(dismissSelf) forControlEvents:UIControlEventTouchUpInside];
     [header addSubview:close];
 
-    UIView *logo = [[UIView alloc] initWithFrame:CGRectMake(24, 68, 72, 72)];
-    logo.backgroundColor = NeedleCurrentColor();
-    logo.layer.cornerRadius = 18;
-    logo.layer.shadowColor = NeedleCurrentColor().CGColor;
-    logo.layer.shadowOffset = CGSizeMake(0, 8);
-    logo.layer.shadowRadius = 22;
-    logo.layer.shadowOpacity = 0.55;
-    UIImageView *logoIcon = [[UIImageView alloc] initWithImage:
-        [UIImage systemImageNamed:@"waveform" withConfiguration:
-            [UIImageSymbolConfiguration configurationWithPointSize:34 weight:UIImageSymbolWeightBold]]];
-    logoIcon.tintColor = [UIColor whiteColor];
-    logoIcon.contentMode = UIViewContentModeCenter;
-    logoIcon.frame = logo.bounds;
-    [logo addSubview:logoIcon];
-    [header addSubview:logo];
-
-    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(24, 150, w - 48, 32)];
+    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(0, 56, w, 36)];
     title.text = @"Needle";
     title.textColor = [UIColor whiteColor];
-    title.font = [UIFont systemFontOfSize:34 weight:UIFontWeightBold];
+    title.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
+    title.textAlignment = NSTextAlignmentCenter;
     title.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [header addSubview:title];
+
+    UIView *hairline = [[UIView alloc] initWithFrame:CGRectMake(0, headerH - 0.5, w, 0.5)];
+    hairline.backgroundColor = [UIColor colorWithWhite:1 alpha:0.08];
+    hairline.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
+    [header addSubview:hairline];
 
     [self.view addSubview:header];
 
     self.table = [[UITableView alloc] initWithFrame:
         CGRectMake(0, headerH, w, self.view.bounds.size.height - headerH)
-        style:UITableViewStyleGrouped];
+        style:UITableViewStylePlain];
     self.table.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    self.table.backgroundColor = [UIColor clearColor];
+    self.table.backgroundColor = [UIColor blackColor];
     self.table.separatorStyle = UITableViewCellSeparatorStyleNone;
-    self.table.rowHeight = 56;
-    self.table.contentInset = UIEdgeInsetsMake(0, 0, 40, 0);
+    self.table.rowHeight = 54;
+    self.table.contentInset = UIEdgeInsetsMake(8, 0, 60, 0);
     if ([self.table respondsToSelector:NSSelectorFromString(@"setSectionHeaderTopPadding:")]) {
-        [self.table setValue:@0 forKey:@"sectionHeaderTopPadding"];
+        [self.table setValue:@16 forKey:@"sectionHeaderTopPadding"];
     }
     self.table.dataSource = self;
     self.table.delegate = self;
@@ -284,79 +261,49 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 
 - (UITableViewCell *)tableView:(UITableView *)t cellForRowAtIndexPath:(NSIndexPath *)ip {
     NeedleRow *row = self.sections[ip.section].rows[ip.row];
-    NSInteger rowCount = self.sections[ip.section].rows.count;
-    BOOL first = ip.row == 0;
-    BOOL last = ip.row == rowCount - 1;
 
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-    cell.backgroundColor = [UIColor clearColor];
-    cell.contentView.backgroundColor = [UIColor clearColor];
+    cell.backgroundColor = [UIColor blackColor];
     cell.textLabel.hidden = YES;
     cell.imageView.hidden = YES;
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
 
-    UIView *card = [[UIView alloc] init];
-    card.backgroundColor = [UIColor colorWithWhite:0.11 alpha:1.0];
-    card.layer.cornerRadius = 16;
-    card.layer.maskedCorners = 0;
-    if (first) card.layer.maskedCorners |= kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
-    if (last)  card.layer.maskedCorners |= kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
-    card.translatesAutoresizingMaskIntoConstraints = NO;
-    [cell.contentView addSubview:card];
-    [NSLayoutConstraint activateConstraints:@[
-        [card.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:20],
-        [card.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-20],
-        [card.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor],
-        [card.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor],
-    ]];
-
-    if (!last) {
-        UIView *sep = [[UIView alloc] init];
-        sep.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.06];
-        sep.translatesAutoresizingMaskIntoConstraints = NO;
-        [card addSubview:sep];
-        [NSLayoutConstraint activateConstraints:@[
-            [sep.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:64],
-            [sep.trailingAnchor constraintEqualToAnchor:card.trailingAnchor],
-            [sep.bottomAnchor constraintEqualToAnchor:card.bottomAnchor],
-            [sep.heightAnchor constraintEqualToConstant:0.5],
-        ]];
-    }
-
-    UIView *iconCircle = [[UIView alloc] init];
-    iconCircle.backgroundColor = NeedleCurrentColor();
-    iconCircle.layer.cornerRadius = 15;
-    iconCircle.translatesAutoresizingMaskIntoConstraints = NO;
-    [card addSubview:iconCircle];
-    [NSLayoutConstraint activateConstraints:@[
-        [iconCircle.widthAnchor constraintEqualToConstant:30],
-        [iconCircle.heightAnchor constraintEqualToConstant:30],
-        [iconCircle.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:16],
-        [iconCircle.centerYAnchor constraintEqualToAnchor:card.centerYAnchor],
-    ]];
     if (row.symbol) {
-        UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightBold];
+        UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:17 weight:UIImageSymbolWeightRegular];
         UIImageView *iv = [[UIImageView alloc] initWithImage:
             [UIImage systemImageNamed:row.symbol withConfiguration:cfg]];
-        iv.tintColor = [UIColor whiteColor];
+        iv.tintColor = [UIColor colorWithWhite:1 alpha:0.9];
         iv.contentMode = UIViewContentModeCenter;
         iv.translatesAutoresizingMaskIntoConstraints = NO;
-        [iconCircle addSubview:iv];
+        [cell.contentView addSubview:iv];
         [NSLayoutConstraint activateConstraints:@[
-            [iv.centerXAnchor constraintEqualToAnchor:iconCircle.centerXAnchor],
-            [iv.centerYAnchor constraintEqualToAnchor:iconCircle.centerYAnchor],
+            [iv.widthAnchor constraintEqualToConstant:28],
+            [iv.heightAnchor constraintEqualToConstant:28],
+            [iv.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:20],
+            [iv.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
         ]];
     }
 
     UILabel *label = [[UILabel alloc] init];
     label.text = row.label;
     label.textColor = [UIColor whiteColor];
-    label.font = [UIFont systemFontOfSize:16 weight:UIFontWeightSemibold];
+    label.font = [UIFont systemFontOfSize:16 weight:UIFontWeightRegular];
     label.translatesAutoresizingMaskIntoConstraints = NO;
-    [card addSubview:label];
+    [cell.contentView addSubview:label];
     [NSLayoutConstraint activateConstraints:@[
-        [label.leadingAnchor constraintEqualToAnchor:iconCircle.trailingAnchor constant:14],
-        [label.centerYAnchor constraintEqualToAnchor:card.centerYAnchor],
+        [label.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:row.symbol ? 62 : 20],
+        [label.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
+    ]];
+
+    UIView *sep = [[UIView alloc] init];
+    sep.backgroundColor = [UIColor colorWithWhite:1 alpha:0.06];
+    sep.translatesAutoresizingMaskIntoConstraints = NO;
+    [cell.contentView addSubview:sep];
+    [NSLayoutConstraint activateConstraints:@[
+        [sep.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:62],
+        [sep.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor],
+        [sep.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor],
+        [sep.heightAnchor constraintEqualToConstant:0.5],
     ]];
 
     if (row.kind == NeedleRowSwitch) {
@@ -366,17 +313,17 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
         sw.translatesAutoresizingMaskIntoConstraints = NO;
         objc_setAssociatedObject(sw, "_needleKey", row.prefKey, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         [sw addTarget:self action:@selector(switchFlipped:) forControlEvents:UIControlEventValueChanged];
-        [card addSubview:sw];
+        [cell.contentView addSubview:sw];
         [NSLayoutConstraint activateConstraints:@[
-            [sw.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-14],
-            [sw.centerYAnchor constraintEqualToAnchor:card.centerYAnchor],
+            [sw.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16],
+            [sw.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
             [label.trailingAnchor constraintLessThanOrEqualToAnchor:sw.leadingAnchor constant:-8],
         ]];
     } else if (row.kind == NeedleRowText) {
         UITextField *tf = [[UITextField alloc] init];
         tf.text = NeedlePrefString(row.prefKey);
         tf.placeholder = row.placeholder;
-        tf.textColor = [UIColor colorWithWhite:1.0 alpha:0.8];
+        tf.textColor = [UIColor colorWithWhite:1 alpha:0.7];
         tf.textAlignment = NSTextAlignmentRight;
         tf.font = [UIFont monospacedSystemFontOfSize:13 weight:UIFontWeightMedium];
         tf.autocapitalizationType = UITextAutocapitalizationTypeNone;
@@ -385,24 +332,23 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
         tf.delegate = self;
         tf.translatesAutoresizingMaskIntoConstraints = NO;
         objc_setAssociatedObject(tf, "_needleKey", row.prefKey, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        [card addSubview:tf];
+        [cell.contentView addSubview:tf];
         [NSLayoutConstraint activateConstraints:@[
-            [tf.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-16],
-            [tf.centerYAnchor constraintEqualToAnchor:card.centerYAnchor],
+            [tf.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-16],
+            [tf.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
             [tf.widthAnchor constraintGreaterThanOrEqualToConstant:140],
             [label.trailingAnchor constraintLessThanOrEqualToAnchor:tf.leadingAnchor constant:-8],
         ]];
     } else if (row.kind == NeedleRowButton) {
-        label.textColor = [UIColor whiteColor];
         UIImageView *chev = [[UIImageView alloc] initWithImage:
             [UIImage systemImageNamed:@"chevron.right" withConfiguration:
-                [UIImageSymbolConfiguration configurationWithPointSize:13 weight:UIImageSymbolWeightBold]]];
-        chev.tintColor = [UIColor colorWithWhite:1.0 alpha:0.3];
+                [UIImageSymbolConfiguration configurationWithPointSize:13 weight:UIImageSymbolWeightSemibold]]];
+        chev.tintColor = [UIColor colorWithWhite:1 alpha:0.35];
         chev.translatesAutoresizingMaskIntoConstraints = NO;
-        [card addSubview:chev];
+        [cell.contentView addSubview:chev];
         [NSLayoutConstraint activateConstraints:@[
-            [chev.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-18],
-            [chev.centerYAnchor constraintEqualToAnchor:card.centerYAnchor],
+            [chev.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-20],
+            [chev.centerYAnchor constraintEqualToAnchor:cell.contentView.centerYAnchor],
         ]];
     }
     return cell;
@@ -418,29 +364,31 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 - (UIView *)tableView:(UITableView *)t viewForHeaderInSection:(NSInteger)s {
     NeedleSection *sec = self.sections[s];
     if (!sec.title.length) return nil;
-    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, t.bounds.size.width, 44)];
-    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(28, 20, t.bounds.size.width - 56, 22)];
+    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, t.bounds.size.width, 36)];
+    header.backgroundColor = [UIColor blackColor];
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(20, 14, t.bounds.size.width - 40, 20)];
     lbl.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    lbl.text = sec.title;
-    lbl.textColor = [UIColor whiteColor];
-    lbl.font = [UIFont systemFontOfSize:17 weight:UIFontWeightBold];
+    lbl.text = sec.title.uppercaseString;
+    lbl.textColor = [UIColor colorWithWhite:1 alpha:0.45];
+    lbl.font = [UIFont systemFontOfSize:11 weight:UIFontWeightSemibold];
     [header addSubview:lbl];
     return header;
 }
 
 - (CGFloat)tableView:(UITableView *)t heightForHeaderInSection:(NSInteger)s {
-    return self.sections[s].title.length ? 44 : 12;
+    return self.sections[s].title.length ? 36 : 8;
 }
 
 - (UIView *)tableView:(UITableView *)t viewForFooterInSection:(NSInteger)s {
     NeedleSection *sec = self.sections[s];
     if (!sec.footer.length) return nil;
     UIView *footer = [[UIView alloc] initWithFrame:CGRectMake(0, 0, t.bounds.size.width, 60)];
-    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(28, 10, t.bounds.size.width - 56, 60)];
+    footer.backgroundColor = [UIColor blackColor];
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(20, 8, t.bounds.size.width - 40, 60)];
     lbl.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     lbl.text = sec.footer;
-    lbl.textColor = [UIColor colorWithWhite:1.0 alpha:0.4];
-    lbl.font = [UIFont systemFontOfSize:12.5 weight:UIFontWeightRegular];
+    lbl.textColor = [UIColor colorWithWhite:1 alpha:0.35];
+    lbl.font = [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
     lbl.numberOfLines = 0;
     [footer addSubview:lbl];
     return footer;
@@ -449,12 +397,12 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 - (CGFloat)tableView:(UITableView *)t heightForFooterInSection:(NSInteger)s {
     NSString *f = self.sections[s].footer;
     if (!f.length) return 4;
-    CGFloat w = t.bounds.size.width - 56;
+    CGFloat w = t.bounds.size.width - 40;
     CGRect r = [f boundingRectWithSize:CGSizeMake(w, 999)
         options:NSStringDrawingUsesLineFragmentOrigin
-        attributes:@{NSFontAttributeName: [UIFont systemFontOfSize:12.5]}
+        attributes:@{NSFontAttributeName: [UIFont systemFontOfSize:12]}
         context:nil];
-    return ceil(r.size.height) + 22;
+    return ceil(r.size.height) + 20;
 }
 
 - (BOOL)textFieldShouldReturn:(UITextField *)tf {
