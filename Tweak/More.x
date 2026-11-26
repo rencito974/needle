@@ -132,10 +132,7 @@ void NeedleOpenQRShare(void) {
 }
 + (UIActivityCategory)activityCategory { return UIActivityCategoryShare; }
 - (BOOL)canPerformWithActivityItems:(NSArray *)items {
-    for (id it in items) {
-        if ([it isKindOfClass:[NSURL class]] || [it isKindOfClass:[NSString class]]) return YES;
-    }
-    return NO;
+    return YES;
 }
 - (void)prepareWithActivityItems:(NSArray *)items {
     for (id it in items) {
@@ -145,6 +142,8 @@ void NeedleOpenQRShare(void) {
             if ([s hasPrefix:@"http"] || [s hasPrefix:@"spotify:"]) { self.shareURL = s; return; }
         }
     }
+    NSString *uri = _needleCurrentTrackCache[@"uri"];
+    if (uri.length) self.shareURL = uri;
 }
 - (void)performActivity {
     NSString *url = self.shareURL;
@@ -172,10 +171,21 @@ void NeedleOpenQRShare(void) {
 
 %hook UIActivityViewController
 - (instancetype)initWithActivityItems:(NSArray *)items applicationActivities:(NSArray *)apps {
-    NeedleQRActivity *qr = [[NeedleQRActivity alloc] init];
     NSMutableArray *all = [apps mutableCopy] ?: [NSMutableArray new];
-    [all insertObject:qr atIndex:0];
+    BOOL present = NO;
+    for (id a in all) if ([a isKindOfClass:[NeedleQRActivity class]]) { present = YES; break; }
+    if (!present) {
+        NeedleQRActivity *qr = [[NeedleQRActivity alloc] init];
+        [all insertObject:qr atIndex:0];
+    }
     return %orig(items, all);
+}
+- (void)setExcludedActivityTypes:(NSArray *)types {
+    NSMutableArray *filtered = [NSMutableArray new];
+    for (NSString *t in types) {
+        if (![t isEqualToString:@"com.needle.qrshare"]) [filtered addObject:t];
+    }
+    %orig(filtered);
 }
 %end
 

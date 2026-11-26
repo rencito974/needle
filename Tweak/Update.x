@@ -4,15 +4,15 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.11.0";
+static NSString *const NeedleCurrentVersion = @"2.12.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Home-screen alt icons rendered 4x then downsampled: much closer to real Spotify.\n"
-           "QR share now picks up the current track reliably (cached on every track change).\n"
-           "QR option added to Spotify's own Share sheet (look for 'QR code').\n"
-           "Settings redesign and Guilty X fix from last build still in.";
+    return @"Alt icons now built from Spotify's own artwork, recoloured per theme: real Spotify shape on the home screen.\n"
+           "QR option never gets filtered out of Spotify's native Share sheet: look under Share for 'QR code'.\n"
+           "QR also pulls from the current-track cache if Spotify passes it no URL at all.\n"
+           "Change app icon from Settings > Change app icon; tap a theme then confirm.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
