@@ -22,8 +22,11 @@ static void NeedleSaveHistory(void) {
     [_cache writeToFile:NeedleHistoryPath() atomically:YES];
 }
 
+extern BOOL NeedleIsGuiltyTrack(NSString *name, NSString *artist);
+
 void NeedleLogPlay(NSString *name, NSString *artist, NSString *album, NSTimeInterval dur) {
     if (!name.length) return;
+    if (NeedleIsGuiltyTrack(name, artist)) return;
     NSMutableArray *hist = NeedleLoadHistory();
     NSDictionary *last = hist.lastObject;
     if (last && [last[@"name"] isEqualToString:name] && [last[@"artist"] isEqualToString:artist ?: @""]) {
@@ -74,10 +77,13 @@ void NeedleClearHistory(void) {
 
 static __weak id _needleSeekPlayer = nil;
 
+extern void NeedleOnPositionChanged(id player, NSTimeInterval pos);
+
 %hook SPTPlayerImpl
 - (void)positionChanged:(NSTimeInterval)pos {
     %orig;
     _needleSeekPlayer = self;
+    NeedleOnPositionChanged(self, pos);
 }
 %end
 

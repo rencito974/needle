@@ -4,15 +4,18 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.7.1";
+static NSString *const NeedleCurrentVersion = @"2.8.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Crash on launch fixed (infinite recursion in the 320 kbps hook).\n"
-           "DNS blocker rewritten to cancel the task instead of swapping args.\n"
-           "Icon picker tint and preview behaviour kept from 2.7.\n"
-           "All other 2.6 features intact: Mood, Similar, Mixer, Mosaic, Recognize, Local.";
+    return @"Progress bar no longer freezes (fixed duplicate position hook).\n"
+           "Lockscreen tap now routes to Spotify (set ExternalContentIdentifier).\n"
+           "Share song as QR code (Discover → Share song QR).\n"
+           "Bluetooth badge in the mini player (headphone name while connected).\n"
+           "Streak tracker: see which songs you've played N days in a row.\n"
+           "Guilty pleasures: a private list that stays out of Wrapped and history.\n"
+           "Rapid preview is stubbed; needs deeper Spotify hooks, shipping next round.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {

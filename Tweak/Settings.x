@@ -213,6 +213,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
         [NeedleRow sw:@"Lockscreen Ken Burns (beta)" key:@"LockMotion" def:NO symbol:@"lock.iphone"],
         [NeedleRow sw:@"Mini player redesign" key:@"MiniPlayerRedesign" def:YES symbol:@"rectangle.bottomthird.inset.filled"],
         [NeedleRow sw:@"Waveform scrubber" key:@"WaveformScrubber" def:NO symbol:@"waveform"],
+        [NeedleRow sw:@"Bluetooth badge in mini" key:@"BTBadge" def:YES symbol:@"airpods"],
     ];
     look.footer = @"Theme and animate the Now Playing surfaces with the current album's palette.";
 
@@ -254,6 +255,18 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
             extern void NeedleOpenLocalPlayer(void);
             NeedleOpenLocalPlayer();
         } symbol:@"folder.fill"],
+        [NeedleRow button:@"Share song (QR)" action:^{
+            extern void NeedleOpenQRShare(void);
+            NeedleOpenQRShare();
+        } symbol:@"qrcode"],
+        [NeedleRow button:@"Streaks" action:^{
+            extern void NeedleOpenStreaks(void);
+            NeedleOpenStreaks();
+        } symbol:@"flame.fill"],
+        [NeedleRow button:@"Guilty pleasures" action:^{
+            extern void NeedleOpenGuilty(void);
+            NeedleOpenGuilty();
+        } symbol:@"eye.slash.fill"],
     ];
     discover.footer = @"Similar / mood / mixer / session all read your local listening history. Twin playback was requested but iOS can't route one app's audio to two outputs, so it is not built.";
 
