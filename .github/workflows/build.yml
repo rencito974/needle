@@ -31,17 +31,42 @@ jobs:
 
           mkdir -p /tmp/tc
           tar --lzma -xf /tmp/toolchain.tar.lzma -C /tmp/tc
-          echo "=== extracted layout ==="
-          find /tmp/tc -maxdepth 4 -name clang -type f | head
+          echo "=== /tmp/tc top level ==="
+          ls -la /tmp/tc
+          echo "=== first-level dirs ==="
+          find /tmp/tc -maxdepth 2 -type d
+          echo "=== any clang* file ==="
+          find /tmp/tc -type f -name "clang*" 2>/dev/null | head -10
+          echo "=== any bin dir ==="
+          find /tmp/tc -type d -name bin 2>/dev/null | head
 
-          mkdir -p $THEOS/toolchain/linux
-          TC_BIN=$(find /tmp/tc -maxdepth 4 -name clang -type f | head -1)
-          TC_ROOT=$(dirname $(dirname "$TC_BIN"))
-          echo "TC_ROOT=$TC_ROOT"
-          mv "$TC_ROOT" $THEOS/toolchain/linux/iphone
+          mkdir -p $THEOS/toolchain/linux/iphone
+          TOP_DIRS=$(find /tmp/tc -maxdepth 1 -mindepth 1 -type d)
+          TOP_COUNT=$(echo "$TOP_DIRS" | grep -c . || true)
+          if [ "$TOP_COUNT" = "1" ]; then
+            SRC="$TOP_DIRS"
+          else
+            SRC="/tmp/tc"
+          fi
+          echo "Using SRC=$SRC"
+          cp -a "$SRC"/* $THEOS/toolchain/linux/iphone/
 
-          echo "=== verify ==="
-          ls $THEOS/toolchain/linux/iphone/bin/clang
+          echo "=== iphone/ root ==="
+          ls -la $THEOS/toolchain/linux/iphone/ | head
+          echo "=== iphone/bin ==="
+          ls $THEOS/toolchain/linux/iphone/bin/ 2>/dev/null | head -20
+
+          if [ ! -f $THEOS/toolchain/linux/iphone/bin/clang ]; then
+            REAL=$(find $THEOS/toolchain/linux/iphone/bin -maxdepth 1 -name "*clang*" -type f ! -name "*++*" ! -name "*format*" ! -name "*tidy*" | head -1)
+            if [ -n "$REAL" ]; then
+              ln -sf "$(basename $REAL)" $THEOS/toolchain/linux/iphone/bin/clang
+              REAL_PP=$(find $THEOS/toolchain/linux/iphone/bin -maxdepth 1 -name "*clang++" -type f | head -1)
+              [ -n "$REAL_PP" ] && ln -sf "$(basename $REAL_PP)" $THEOS/toolchain/linux/iphone/bin/clang++
+            fi
+          fi
+
+          echo "=== final verify ==="
+          ls -la $THEOS/toolchain/linux/iphone/bin/clang
           $THEOS/toolchain/linux/iphone/bin/clang --version || true
 
       - name: Build
