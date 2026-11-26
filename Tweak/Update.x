@@ -4,16 +4,17 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.1.0";
+static NSString *const NeedleCurrentVersion = @"2.2.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Spotify-shaped app icons (three soundwave arcs, six colours).\n"
-           "Cleaner mini player (no more muddy tint).\n"
-           "Changelog opens instantly (no server needed).\n"
-           "Floating gear hides by default and only shows when you open your profile.\n"
-           "Stability and layout fixes.";
+    return @"Swiping the mini player to skip songs works again.\n"
+           "Lockscreen Ken Burns moved to beta and turned off by default (was blanking album art).\n"
+           "Spotify-shaped app icons (three soundwave arcs, six colours).\n"
+           "Cleaner mini player (no muddy tint).\n"
+           "Changelog opens instantly, no network.\n"
+           "Floating gear only shows on your profile.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {

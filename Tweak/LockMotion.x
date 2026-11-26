@@ -6,35 +6,32 @@ extern BOOL NeedlePrefBool(NSString *key, BOOL def);
 static UIImage *_needleLockSource = nil;
 static NSTimer *_needleLockTimer = nil;
 static CGFloat _needleLockPhase = 0.0;
+static BOOL _needleLockReentryGuard = NO;
 
 static UIImage *NeedleRenderLockFrame(UIImage *src, CGFloat phase) {
-    if (!src) return nil;
+    if (!src || !src.CGImage) return src;
     CGFloat w = src.size.width;
     CGFloat h = src.size.height;
-    CGFloat zoom = 1.08 + 0.06 * sinf(phase);
-    CGFloat panX = 0.025 * cosf(phase * 0.7);
-    CGFloat panY = 0.025 * sinf(phase * 0.5);
+    if (w < 16 || h < 16) return src;
+    CGFloat zoom = 1.06 + 0.04 * sinf(phase);
+    CGFloat panX = 0.02 * cosf(phase * 0.7);
+    CGFloat panY = 0.02 * sinf(phase * 0.5);
 
-    CGSize outSize = CGSizeMake(w, h);
     UIGraphicsImageRendererFormat *fmt = [UIGraphicsImageRendererFormat defaultFormat];
-    fmt.scale = src.scale;
+    fmt.scale = src.scale ?: 1.0;
     fmt.opaque = YES;
-    UIGraphicsImageRenderer *r = [[UIGraphicsImageRenderer alloc] initWithSize:outSize format:fmt];
+    UIGraphicsImageRenderer *r = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(w, h) format:fmt];
     return [r imageWithActions:^(UIGraphicsImageRendererContext *ctx) {
-        CGFloat cropW = w / zoom;
-        CGFloat cropH = h / zoom;
-        CGFloat cropX = (w - cropW) / 2 + w * panX;
-        CGFloat cropY = (h - cropH) / 2 + h * panY;
-        CGRect srcRect = CGRectMake(cropX, cropY, cropW, cropH);
-        CGImageRef sub = CGImageCreateWithImageInRect(src.CGImage, srcRect);
-        if (!sub) return;
-        [[UIImage imageWithCGImage:sub scale:src.scale orientation:src.imageOrientation] drawInRect:CGRectMake(0, 0, w, h)];
-        CGImageRelease(sub);
+        CGFloat drawW = w * zoom;
+        CGFloat drawH = h * zoom;
+        CGFloat dx = (w - drawW) / 2 + w * panX;
+        CGFloat dy = (h - drawH) / 2 + h * panY;
+        [src drawInRect:CGRectMake(dx, dy, drawW, drawH)];
     }];
 }
 
 static void NeedleStartLockMotion(void) {
-    if (!NeedlePrefBool(@"LockMotion", YES)) return;
+    if (!NeedlePrefBool(@"LockMotion", NO)) return;
     if (_needleLockTimer) return;
     _needleLockPhase = 0;
     _needleLockTimer = [NSTimer scheduledTimerWithTimeInterval:0.6 repeats:YES block:^(NSTimer *t) {
@@ -47,17 +44,19 @@ static void NeedleStartLockMotion(void) {
             return frame;
         }];
         info[MPMediaItemPropertyArtwork] = art;
+        _needleLockReentryGuard = YES;
         [[MPNowPlayingInfoCenter defaultCenter] setNowPlayingInfo:info];
+        _needleLockReentryGuard = NO;
     }];
 }
 
 %hook MPNowPlayingInfoCenter
 - (void)setNowPlayingInfo:(NSDictionary *)info {
-    if (NeedlePrefBool(@"LockMotion", YES)) {
+    if (!_needleLockReentryGuard && NeedlePrefBool(@"LockMotion", NO)) {
         MPMediaItemArtwork *art = info[MPMediaItemPropertyArtwork];
         if (art && [art respondsToSelector:@selector(imageWithSize:)]) {
-            UIImage *img = [art imageWithSize:CGSizeMake(1024, 1024)];
-            if (img && img != _needleLockSource) {
+            UIImage *img = [art imageWithSize:CGSizeMake(640, 640)];
+            if (img && img.CGImage) {
                 _needleLockSource = img;
                 NeedleStartLockMotion();
             }

@@ -35,7 +35,6 @@ static char _kNeedleMiniProgress;
     CGRect pf = progress.frame;
     pf.origin.y = self.bounds.size.height - pf.size.height;
     progress.frame = pf;
-    [self bringSubviewToFront:progress];
 }
 
 %end

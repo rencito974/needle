@@ -226,7 +226,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
         [NeedleRow sw:@"Album colored UI" key:@"AlbumColorUI" def:YES symbol:@"paintpalette"],
         [NeedleRow sw:@"Artwork breathing" key:@"ArtworkBreathing" def:YES symbol:@"waveform.path"],
         [NeedleRow sw:@"Accent colors on controls" key:@"AccentColors" def:YES symbol:@"circle.hexagongrid.fill"],
-        [NeedleRow sw:@"Lockscreen Ken Burns" key:@"LockMotion" def:YES symbol:@"lock.iphone"],
+        [NeedleRow sw:@"Lockscreen Ken Burns (beta)" key:@"LockMotion" def:NO symbol:@"lock.iphone"],
         [NeedleRow sw:@"Mini player redesign" key:@"MiniPlayerRedesign" def:YES symbol:@"rectangle.bottomthird.inset.filled"],
     ];
     look.footer = @"Theme and animate the Now Playing surfaces with the current album's palette.";
