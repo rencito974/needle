@@ -156,7 +156,9 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     self.table.separatorColor = [UIColor colorWithWhite:1.0 alpha:0.08];
     self.table.separatorInset = UIEdgeInsetsMake(0, 68, 0, 0);
     self.table.rowHeight = 60;
-    self.table.sectionHeaderTopPadding = 4;
+    if ([self.table respondsToSelector:NSSelectorFromString(@"setSectionHeaderTopPadding:")]) {
+        [self.table setValue:@4 forKey:@"sectionHeaderTopPadding"];
+    }
     self.table.dataSource = self;
     self.table.delegate = self;
     [self.view addSubview:self.table];
