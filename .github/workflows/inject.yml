@@ -52,7 +52,8 @@ jobs:
       - name: Run cyan
         run: |
           cd work
-          python3 -m cyan -i spotify.ipa -o Needle-Spotify.ipa -f Needle-latest.deb
+          which cyan || pip3 show cyan | grep Location
+          cyan -i spotify.ipa -o Needle-Spotify.ipa -f Needle-latest.deb -u
           ls -la Needle-Spotify.ipa
 
       - name: Publish Needle-Spotify.ipa
