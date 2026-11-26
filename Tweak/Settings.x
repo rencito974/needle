@@ -922,7 +922,7 @@ static UIView *_NeedleBuildButton(CGRect frame) {
     return host;
 }
 
-static void NeedleInstallFloatingButton(void) {
+void NeedleInstallFloatingButton(void) {
     UIWindow *target = nil;
     NSArray *scenes = [[UIApplication sharedApplication].connectedScenes allObjects];
     for (UIScene *s in scenes) {
@@ -990,7 +990,7 @@ static UIView *_NeedleBuildQRFloat(CGRect frame) {
     return host;
 }
 
-static void NeedleInstallFloatingQR(void) {
+void NeedleInstallFloatingQR(void) {
     UIWindow *target = nil;
     NSArray *scenes = [[UIApplication sharedApplication].connectedScenes allObjects];
     for (UIScene *s in scenes) {
