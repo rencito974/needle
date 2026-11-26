@@ -7,13 +7,45 @@ import zipfile
 import lzma
 import gzip
 import argparse
-import subprocess
 from pathlib import Path
 
 try:
     import lief
 except ImportError:
     sys.exit("pip install lief first")
+
+
+CYAN_EXTRAS_CANDIDATES = [
+    Path(os.environ.get("APPDATA", "")) / "Python" / "Python314" / "site-packages" / "cyan" / "extras",
+    Path(os.environ.get("APPDATA", "")) / "Python" / "Python313" / "site-packages" / "cyan" / "extras",
+    Path(os.environ.get("APPDATA", "")) / "Python" / "Python312" / "site-packages" / "cyan" / "extras",
+    Path.home() / ".local" / "lib" / "python3.14" / "site-packages" / "cyan" / "extras",
+    Path.home() / "Library" / "Python" / "3.14" / "lib" / "python" / "site-packages" / "cyan" / "extras",
+]
+
+
+def find_cyan_extras():
+    for p in CYAN_EXTRAS_CANDIDATES:
+        if (p / "CydiaSubstrate.framework" / "CydiaSubstrate").exists():
+            return p
+    try:
+        import cyan
+        base = Path(cyan.__file__).parent / "extras"
+        if (base / "CydiaSubstrate.framework" / "CydiaSubstrate").exists():
+            return base
+    except Exception:
+        pass
+    try:
+        import subprocess
+        r = subprocess.run(["pip", "show", "cyan"], capture_output=True, text=True)
+        for line in r.stdout.splitlines():
+            if line.startswith("Location:"):
+                base = Path(line.split(":", 1)[1].strip()) / "cyan" / "extras"
+                if (base / "CydiaSubstrate.framework" / "CydiaSubstrate").exists():
+                    return base
+    except Exception:
+        pass
+    return None
 
 
 def extract_deb(deb_path, out_dir):
@@ -53,18 +85,44 @@ def find_bundles(root):
     return [p for p in Path(root).rglob("*.bundle") if p.is_dir()]
 
 
+def rewrite_dylib_paths(path, rewrites, new_id=None):
+    binary = lief.MachO.parse(str(path))
+    if binary is None:
+        raise RuntimeError(f"could not parse {path}")
+    for fat in binary:
+        for cmd in list(fat.commands):
+            if "Dylib" not in type(cmd).__name__:
+                continue
+            name = getattr(cmd, "name", None)
+            if not name:
+                continue
+            for old, new in rewrites.items():
+                if name.startswith(old):
+                    tail = name[len(old):]
+                    cmd.name = new + tail
+                    print(f"      rewrote {old}... -> {new}{tail}")
+                    break
+        if new_id is not None:
+            for cmd in fat.commands:
+                if type(cmd).__name__ == "DylibCommand" and str(cmd.command).endswith("ID_DYLIB"):
+                    cmd.name = new_id
+                    print(f"      set ID to {new_id}")
+                    break
+    binary.write(str(path))
+
+
 def inject_load(binary_path, load_path):
     binary = lief.MachO.parse(str(binary_path))
     for fat in binary:
-        existing = {c.name for c in fat.commands if isinstance(c, lief.MachO.DylibCommand)}
+        existing = {getattr(c, "name", None) for c in fat.commands if "Dylib" in type(c).__name__}
         if load_path in existing:
-            print(f"  already linked {load_path}")
+            print(f"      already linked {load_path}")
             continue
         cmd = lief.MachO.DylibCommand.load_dylib(load_path)
         cmd.compatibility_version = (1, 0, 0)
         cmd.current_version = (1, 0, 0)
         fat.add(cmd)
-        print(f"  added LC_LOAD_DYLIB {load_path}")
+        print(f"      added LC_LOAD_DYLIB {load_path}")
     binary.write(str(binary_path))
 
 
@@ -104,15 +162,20 @@ def main():
     print(f"Out : {out_path}")
     print(f"Work: {work}")
 
+    extras = find_cyan_extras()
+    if not extras:
+        sys.exit("could not find cyan's CydiaSubstrate.framework. pip install --user cyan")
+    print(f"Extras: {extras}")
+
     if work.exists():
         shutil.rmtree(work)
     work.mkdir(parents=True)
 
-    print("\n[1/5] unpacking IPA")
+    print("\n[1/6] unpacking IPA")
     with zipfile.ZipFile(ipa_path) as z:
         z.extractall(work / "ipa")
 
-    print("[2/5] extracting .deb")
+    print("[2/6] extracting .deb")
     extract_deb(deb_path, work / "deb")
 
     payload = work / "ipa" / "Payload"
@@ -125,21 +188,31 @@ def main():
         candidates = [p for p in app.iterdir() if p.is_file() and not p.suffix]
         if candidates:
             binary = candidates[0]
-    print(f"  app    = {app.name}")
-    print(f"  binary = {binary.name}")
+    print(f"      app    = {app.name}")
+    print(f"      binary = {binary.name}")
 
-    print("[3/5] staging dylibs into Frameworks/")
+    print("[3/6] copying CydiaSubstrate.framework into Frameworks/")
     frameworks = app / "Frameworks"
     frameworks.mkdir(exist_ok=True)
+    cs_src = extras / "CydiaSubstrate.framework"
+    cs_dst = frameworks / "CydiaSubstrate.framework"
+    if cs_dst.exists():
+        shutil.rmtree(cs_dst)
+    shutil.copytree(cs_src, cs_dst)
+    print(f"      staged {cs_dst.name}")
+
+    print("[4/6] staging dylibs and bundles into Frameworks/")
     dylibs = find_dylibs(work / "deb")
     if not dylibs:
         sys.exit("no .dylib inside .deb")
-    staged = []
+    staged_dylibs = []
     for dy in dylibs:
+        if dy.name == "CydiaSubstrate":
+            continue
         dest = frameworks / dy.name
         shutil.copy2(dy, dest)
-        staged.append(dest.name)
-        print(f"  staged {dy.name}")
+        staged_dylibs.append(dest)
+        print(f"      staged {dy.name}")
 
     bundles = find_bundles(work / "deb")
     for b in bundles:
@@ -147,13 +220,29 @@ def main():
         if dest.exists():
             shutil.rmtree(dest)
         shutil.copytree(b, dest)
-        print(f"  staged bundle {b.name}")
+        print(f"      staged bundle {b.name}")
 
-    print("[4/5] patching main binary load commands")
-    for name in staged:
-        inject_load(binary, f"@executable_path/Frameworks/{name}")
+    print("[5/6] rewriting dylib load paths for sideload")
+    rewrites = {
+        "/Library/Frameworks/CydiaSubstrate.framework/CydiaSubstrate":
+            "@executable_path/Frameworks/CydiaSubstrate.framework/CydiaSubstrate",
+        "/usr/lib/libsubstrate.dylib":
+            "@executable_path/Frameworks/CydiaSubstrate.framework/CydiaSubstrate",
+        "/usr/lib/libhooker.dylib":
+            "@executable_path/Frameworks/CydiaSubstrate.framework/CydiaSubstrate",
+        "/usr/lib/libblackjack.dylib":
+            "@executable_path/Frameworks/CydiaSubstrate.framework/CydiaSubstrate",
+    }
+    for dy in staged_dylibs:
+        print(f"    {dy.name}:")
+        rewrite_dylib_paths(dy, rewrites, new_id=f"@executable_path/Frameworks/{dy.name}")
 
-    print("[5/5] packaging IPA")
+    print("[6/6] injecting load commands into main binary")
+    print(f"    {binary.name}:")
+    for dy in staged_dylibs:
+        inject_load(binary, f"@executable_path/Frameworks/{dy.name}")
+
+    print("\n[pack] zipping IPA")
     zip_app(work / "ipa", out_path)
     print(f"\nDone: {out_path}")
     print(f"size: {out_path.stat().st_size / 1024 / 1024:.1f} MB")
