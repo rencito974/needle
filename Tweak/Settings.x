@@ -96,7 +96,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.16";
+    return @"2.17";
 }
 
 @implementation NeedleSettingsViewController
@@ -323,8 +323,18 @@ static NSString *_NeedleVersionTag(void) {
 
 - (void)viewWillDisappear:(BOOL)animated {
     [super viewWillDisappear:animated];
-    extern void _NeedleSyncGearVisibility(void);
-    _NeedleSyncGearVisibility();
+    extern void NeedleShowFloatingButton(void);
+    extern void NeedleInstallFloatingButton(void);
+    extern void NeedleInstallFloatingQR(void);
+    extern void NeedleInstallFloatingRating(void);
+    NeedleShowFloatingButton();
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        NeedleInstallFloatingButton();
+        NeedleInstallFloatingQR();
+        NeedleInstallFloatingRating();
+        extern void _NeedleSyncGearVisibility(void);
+        _NeedleSyncGearVisibility();
+    });
 }
 
 - (void)dismissSelf {
@@ -762,6 +772,13 @@ static NSString *_NeedleVersionTag(void) {
     NeedleOpenQRShare();
 }
 
++ (void)_needleRatingFloatTap:(UITapGestureRecognizer *)g {
+    UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+    [fb impactOccurred];
+    extern void NeedleOpenRating(void);
+    NeedleOpenRating();
+}
+
 + (void)_needleGearPan:(UIPanGestureRecognizer *)g {
     UIView *host = g.view;
     if (!host || !host.superview) return;
@@ -828,6 +845,7 @@ static void _NeedleAttachLongPress(UIView *view) {
 
 static UIView *_needleFloatingHost = nil;
 static UIView *_needleFloatingQR = nil;
+static UIView *_needleFloatingRating = nil;
 static BOOL _needleFloatingHidden = NO;
 
 static BOOL _NeedleTrackIsCached(void) {
@@ -838,17 +856,20 @@ void NeedleHideFloatingButton(void) {
     _needleFloatingHidden = YES;
     if (_needleFloatingHost) _needleFloatingHost.hidden = YES;
     if (_needleFloatingQR) _needleFloatingQR.hidden = YES;
+    if (_needleFloatingRating) _needleFloatingRating.hidden = YES;
 }
 
 void NeedleShowFloatingButton(void) {
     _needleFloatingHidden = NO;
     if (_needleFloatingHost) _needleFloatingHost.hidden = NO;
     if (_needleFloatingQR) _needleFloatingQR.hidden = !_NeedleTrackIsCached();
+    if (_needleFloatingRating) _needleFloatingRating.hidden = !_NeedleTrackIsCached();
 }
 
 void _NeedleSyncGearVisibility(void) {
     if (_needleFloatingHost) _needleFloatingHost.hidden = _needleFloatingHidden;
     if (_needleFloatingQR) _needleFloatingQR.hidden = _needleFloatingHidden || !_NeedleTrackIsCached();
+    if (_needleFloatingRating) _needleFloatingRating.hidden = _needleFloatingHidden || !_NeedleTrackIsCached();
 }
 
 static UIView *_NeedleBuildButton(CGRect frame) {
@@ -1001,6 +1022,78 @@ static void NeedleInstallFloatingQR(void) {
     [target bringSubviewToFront:_needleFloatingQR];
 }
 
+static UIView *_NeedleBuildRatingFloat(CGRect frame) {
+    UIView *host = [[UIView alloc] initWithFrame:frame];
+    host.backgroundColor = [UIColor clearColor];
+    host.layer.shadowColor = [UIColor blackColor].CGColor;
+    host.layer.shadowOffset = CGSizeMake(0, 4);
+    host.layer.shadowRadius = 10;
+    host.layer.shadowOpacity = 0.4;
+
+    UIBlurEffect *blur = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterialDark];
+    UIVisualEffectView *vfx = [[UIVisualEffectView alloc] initWithEffect:blur];
+    vfx.frame = host.bounds;
+    vfx.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    vfx.layer.cornerRadius = frame.size.width / 2;
+    vfx.layer.masksToBounds = YES;
+    vfx.layer.borderWidth = 0.5;
+    vfx.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.35].CGColor;
+    [host addSubview:vfx];
+
+    UIView *tint = [[UIView alloc] initWithFrame:host.bounds];
+    tint.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    tint.backgroundColor = [[NeedleCurrentColor() colorWithAlphaComponent:0.22] copy];
+    tint.layer.cornerRadius = frame.size.width / 2;
+    [vfx.contentView addSubview:tint];
+
+    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:19 weight:UIImageSymbolWeightBold];
+    UIImage *icon = [UIImage systemImageNamed:@"star.fill" withConfiguration:cfg];
+    UIImageView *iv = [[UIImageView alloc] initWithImage:icon];
+    iv.tintColor = NeedleCurrentColor();
+    iv.contentMode = UIViewContentModeCenter;
+    iv.frame = host.bounds;
+    iv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [vfx.contentView addSubview:iv];
+
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]
+        initWithTarget:[NeedleSettingsViewController class]
+        action:@selector(_needleRatingFloatTap:)];
+    [host addGestureRecognizer:tap];
+    return host;
+}
+
+void NeedleInstallFloatingRating(void) {
+    UIWindow *target = nil;
+    NSArray *scenes = [[UIApplication sharedApplication].connectedScenes allObjects];
+    for (UIScene *s in scenes) {
+        if ([s isKindOfClass:[UIWindowScene class]] && s.activationState == UISceneActivationStateForegroundActive) {
+            UIWindowScene *ws = (UIWindowScene *)s;
+            for (UIWindow *w in ws.windows) {
+                if (w.isKeyWindow) { target = w; break; }
+            }
+            if (!target && ws.windows.count) target = ws.windows.firstObject;
+            if (target) break;
+        }
+    }
+    if (!target) return;
+
+    BOOL show = _NeedleTrackIsCached() && !_needleFloatingHidden;
+
+    if (_needleFloatingRating && _needleFloatingRating.superview == target) {
+        _needleFloatingRating.hidden = !show;
+        [target bringSubviewToFront:_needleFloatingRating];
+        return;
+    }
+    if (_needleFloatingRating) [_needleFloatingRating removeFromSuperview];
+
+    CGFloat btnSize = 42;
+    CGRect frame = CGRectMake(target.bounds.size.width - btnSize - 16 - (btnSize + 10) * 2, 68, btnSize, btnSize);
+    _needleFloatingRating = _NeedleBuildRatingFloat(frame);
+    _needleFloatingRating.hidden = !show;
+    [target addSubview:_needleFloatingRating];
+    [target bringSubviewToFront:_needleFloatingRating];
+}
+
 %hook UIWindow
 - (void)layoutSubviews {
     %orig;
@@ -1015,6 +1108,11 @@ static void NeedleInstallFloatingQR(void) {
         } else {
             [self bringSubviewToFront:_needleFloatingQR];
         }
+        if (!_needleFloatingRating || _needleFloatingRating.superview != self) {
+            NeedleInstallFloatingRating();
+        } else {
+            [self bringSubviewToFront:_needleFloatingRating];
+        }
     }
 }
 %end
@@ -1026,6 +1124,7 @@ static void NeedleStartInstallWatchdog(void) {
     _needleInstallTimer = [NSTimer scheduledTimerWithTimeInterval:1.5 repeats:YES block:^(NSTimer *t) {
         NeedleInstallFloatingButton();
         NeedleInstallFloatingQR();
+        NeedleInstallFloatingRating();
     }];
 }
 
@@ -1035,6 +1134,7 @@ static void NeedleStartInstallWatchdog(void) {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NeedleInstallFloatingButton();
         NeedleInstallFloatingQR();
+        NeedleInstallFloatingRating();
         _NeedleSyncGearVisibility();
     });
 }
@@ -1058,6 +1158,7 @@ static void NeedleStartInstallWatchdog(void) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 NeedleInstallFloatingButton();
                 NeedleInstallFloatingQR();
+                NeedleInstallFloatingRating();
                 NeedleStartInstallWatchdog();
             });
         }];
@@ -1068,12 +1169,14 @@ static void NeedleStartInstallWatchdog(void) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 NeedleInstallFloatingButton();
                 NeedleInstallFloatingQR();
+                NeedleInstallFloatingRating();
                 NeedleStartInstallWatchdog();
             });
         }];
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NeedleInstallFloatingButton();
         NeedleInstallFloatingQR();
+        NeedleInstallFloatingRating();
         NeedleStartInstallWatchdog();
     });
 }

@@ -4,15 +4,14 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.16.0";
+static NSString *const NeedleCurrentVersion = @"2.17.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Album wall: scrollable mosaic of every album you've played this year, sorted by play count. Tap through Settings > You > Album wall.\n"
-           "Rating lightning: 1-10 pad. Tap fast, rate a lot. Needle stores it per track.\n"
-           "Forgotten favorites: tracks you played 3+ times then haven't touched in 30+ days. Settings > Discover > Forgotten favorites.\n"
-           "Note: true Dynamic Island / Live Activity needs a separate widget extension bundle, which a cyan injected tweak can't ship. The lock screen Now Playing card already uses what we set.";
+    return @"Gear button no longer gets stuck hidden after you close Settings; it reinstalls and shows itself again.\n"
+           "Third floating button added: star icon next to the QR circle, shows whenever a track is cached, one tap opens the Rating pad for the current song.\n"
+           "All three floating buttons (gear, QR, rating) now get aggressively reinstalled after Settings dismisses so they stay reachable from anywhere in Spotify.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
