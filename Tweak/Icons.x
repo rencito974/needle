@@ -2,6 +2,8 @@
 #import <CoreImage/CoreImage.h>
 
 extern UIColor *NeedleCurrentColor(void);
+extern NSString *NeedlePrefString(NSString *key);
+extern void NeedlePrefSetString(NSString *key, NSString *val);
 
 @interface NeedleIconPickerViewController : UIViewController <UICollectionViewDataSource, UICollectionViewDelegate>
 @property (nonatomic, strong) UICollectionView *grid;
@@ -57,13 +59,22 @@ extern UIColor *NeedleCurrentColor(void);
     layout.minimumLineSpacing = 24;
     layout.sectionInset = UIEdgeInsetsMake(20, 24, 40, 24);
 
-    self.grid = [[UICollectionView alloc] initWithFrame:CGRectMake(0, 112, w, self.view.bounds.size.height - 112) collectionViewLayout:layout];
+    self.grid = [[UICollectionView alloc] initWithFrame:CGRectMake(0, 112, w, self.view.bounds.size.height - 192) collectionViewLayout:layout];
     self.grid.backgroundColor = [UIColor clearColor];
     self.grid.dataSource = self;
     self.grid.delegate = self;
     self.grid.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [self.grid registerClass:[UICollectionViewCell class] forCellWithReuseIdentifier:@"c"];
     [self.view addSubview:self.grid];
+
+    UILabel *note = [[UILabel alloc] initWithFrame:CGRectMake(24, self.view.bounds.size.height - 80, w - 48, 50)];
+    note.text = @"Preview only. Home-screen icon stays Spotify until cyan bundles the PNGs (next inject round).";
+    note.textColor = [UIColor colorWithWhite:1 alpha:0.4];
+    note.font = [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
+    note.textAlignment = NSTextAlignmentCenter;
+    note.numberOfLines = 0;
+    note.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth;
+    [self.view addSubview:note];
 }
 
 - (void)dismissSelf { [self dismissViewControllerAnimated:YES completion:nil]; }
@@ -97,42 +108,22 @@ extern UIColor *NeedleCurrentColor(void);
 }
 
 - (UIImage *)recoloredIcon:(UIImage *)src withTint:(UIColor *)tint {
-    if (!src || !tint) return src;
-    CGSize size = src.size;
-    UIGraphicsImageRendererFormat *fmt = [UIGraphicsImageRendererFormat defaultFormat];
-    fmt.scale = src.scale ?: 2.0;
-    fmt.opaque = YES;
-    UIGraphicsImageRenderer *r = [[UIGraphicsImageRenderer alloc] initWithSize:size format:fmt];
-    return [r imageWithActions:^(UIGraphicsImageRendererContext *ctx) {
-        [tint setFill];
-        UIRectFill(CGRectMake(0, 0, size.width, size.height));
-        CIImage *input = [CIImage imageWithCGImage:src.CGImage];
-        CIFilter *inv = [CIFilter filterWithName:@"CIColorInvert"];
-        [inv setValue:input forKey:kCIInputImageKey];
-        CIFilter *mono = [CIFilter filterWithName:@"CIColorMonochrome"];
-        [mono setValue:inv.outputImage forKey:kCIInputImageKey];
-        [mono setValue:[CIColor colorWithRed:1 green:1 blue:1] forKey:@"inputColor"];
-        [mono setValue:@1.0 forKey:@"inputIntensity"];
-        CIContext *cctx = [CIContext contextWithOptions:nil];
-        CGImageRef mask = [cctx createCGImage:mono.outputImage fromRect:[mono.outputImage extent]];
-        if (mask) {
-            CGContextRef gctx = UIGraphicsGetCurrentContext();
-            CGFloat inset = size.width * 0.18;
-            CGRect d = CGRectMake(inset, inset, size.width - inset * 2, size.height - inset * 2);
-            CGContextSaveGState(gctx);
-            CGContextTranslateCTM(gctx, 0, size.height);
-            CGContextScaleCTM(gctx, 1, -1);
-            CGRect flipped = CGRectMake(d.origin.x, size.height - d.origin.y - d.size.height, d.size.width, d.size.height);
-            CGContextClipToMask(gctx, flipped, mask);
-            CGFloat r2, g2, b2;
-            [tint getRed:&r2 green:&g2 blue:&b2 alpha:NULL];
-            BOOL darkBg = (r2 + g2 + b2) < 1.5;
-            CGContextSetFillColorWithColor(gctx, darkBg ? [UIColor whiteColor].CGColor : [UIColor blackColor].CGColor);
-            CGContextFillRect(gctx, flipped);
-            CGContextRestoreGState(gctx);
-            CGImageRelease(mask);
-        }
-    }];
+    if (!src || !tint || !src.CGImage) return src;
+    CIImage *input = [CIImage imageWithCGImage:src.CGImage];
+    CGFloat r, g, b;
+    [tint getRed:&r green:&g blue:&b alpha:NULL];
+    CIFilter *mono = [CIFilter filterWithName:@"CIColorMonochrome"];
+    [mono setValue:input forKey:kCIInputImageKey];
+    [mono setValue:[CIColor colorWithRed:r green:g blue:b] forKey:@"inputColor"];
+    [mono setValue:@1.0 forKey:@"inputIntensity"];
+    CIImage *out = mono.outputImage;
+    if (!out) return src;
+    CIContext *ctx = [CIContext contextWithOptions:nil];
+    CGImageRef cg = [ctx createCGImage:out fromRect:out.extent];
+    if (!cg) return src;
+    UIImage *result = [UIImage imageWithCGImage:cg scale:src.scale orientation:src.imageOrientation];
+    CGImageRelease(cg);
+    return result;
 }
 
 - (UICollectionViewCell *)collectionView:(UICollectionView *)v cellForItemAtIndexPath:(NSIndexPath *)ip {
@@ -182,7 +173,7 @@ extern UIColor *NeedleCurrentColor(void);
     lbl.textAlignment = NSTextAlignmentCenter;
     [cell.contentView addSubview:lbl];
 
-    NSString *current = [[UIApplication sharedApplication] alternateIconName] ?: @"";
+    NSString *current = NeedlePrefString(@"PreferredIconKey") ?: @"";
     if ([current isEqualToString:icon[@"key"]]) {
         iv.layer.borderWidth = 3;
         iv.layer.borderColor = [UIColor whiteColor].CGColor;
@@ -192,28 +183,15 @@ extern UIColor *NeedleCurrentColor(void);
 
 - (void)collectionView:(UICollectionView *)v didSelectItemAtIndexPath:(NSIndexPath *)ip {
     NSDictionary *icon = self.icons[ip.item];
-    NSString *key = icon[@"key"];
-    NSString *name = key.length ? key : nil;
+    NSString *key = icon[@"key"] ?: @"";
+    NeedlePrefSetString(@"PreferredIconKey", key);
+    UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+    [fb impactOccurred];
+    [v reloadData];
     UIApplication *app = [UIApplication sharedApplication];
-    if (![app supportsAlternateIcons]) {
-        UIAlertController *a = [UIAlertController alertControllerWithTitle:@"Not supported" message:@"This build doesn't allow alternate icons. Cyan needs to be passed --icons on the next build." preferredStyle:UIAlertControllerStyleAlert];
-        [a addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-        [self presentViewController:a animated:YES completion:nil];
-        return;
+    if ([app supportsAlternateIcons] && key.length) {
+        [app setAlternateIconName:key completionHandler:^(NSError *err) {}];
     }
-    [app setAlternateIconName:name completionHandler:^(NSError *err) {
-        if (err) {
-            UIAlertController *a = [UIAlertController alertControllerWithTitle:@"Can't switch icon" message:err.localizedDescription preferredStyle:UIAlertControllerStyleAlert];
-            [a addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self presentViewController:a animated:YES completion:nil];
-            });
-            return;
-        }
-        UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
-        [fb impactOccurred];
-        [v reloadData];
-    }];
 }
 
 @end

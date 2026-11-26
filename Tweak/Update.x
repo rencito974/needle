@@ -4,18 +4,16 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.6.0";
+static NSString *const NeedleCurrentVersion = @"2.7.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"DNS-level analytics block (pixel.spotify.com and friends).\n"
-           "Force 320 kbps streaming on free tier.\n"
-           "Gapless within the same album.\n"
-           "Free-tier unlocks (toggle in Playback) flip Spotify's 'is premium' client flags.\n"
+    return @"Icon picker previews fixed (clean monochrome tint, no ghost squares).\n"
+           "No more Not Supported alert; selection is preview-only until cyan bundles the PNGs.\n"
+           "DNS analytics block, 320 kbps, gapless, free-tier unlocks.\n"
            "Mood jumper, Similar songs, Playlist mixer, Session mosaic.\n"
-           "Recognize song (Shazam-based, needs mic).\n"
-           "Local music player for your own files.\n"
+           "Recognize song (Shazam-based) and local music player.\n"
            "Twin playback cannot be built: iOS can't split audio across outputs.";
 }
 
