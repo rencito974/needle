@@ -6,6 +6,7 @@ import tarfile
 import zipfile
 import lzma
 import gzip
+import struct
 import argparse
 from pathlib import Path
 
@@ -13,6 +14,16 @@ try:
     import lief
 except ImportError:
     sys.exit("pip install lief first")
+
+
+LC_LOAD_DYLIB = 0x0C
+LC_LOAD_WEAK_DYLIB = 0x80000018
+LC_SEGMENT_64 = 0x19
+LC_CODE_SIGNATURE = 0x1D
+MH_MAGIC_64 = 0xFEEDFACF
+MH_CIGAM_64 = 0xCFFAEDFE
+FAT_MAGIC = 0xCAFEBABE
+FAT_MAGIC_64 = 0xCAFEBABF
 
 
 CYAN_EXTRAS_CANDIDATES = [
@@ -111,19 +122,166 @@ def rewrite_dylib_paths(path, rewrites, new_id=None):
     binary.write(str(path))
 
 
-def inject_load(binary_path, load_path):
-    binary = lief.MachO.parse(str(binary_path))
-    for fat in binary:
-        existing = {getattr(c, "name", None) for c in fat.commands if "Dylib" in type(c).__name__}
-        if load_path in existing:
-            print(f"      already linked {load_path}")
-            continue
-        cmd = lief.MachO.DylibCommand.load_dylib(load_path)
-        cmd.compatibility_version = (1, 0, 0)
-        cmd.current_version = (1, 0, 0)
-        fat.add(cmd)
-        print(f"      added LC_LOAD_DYLIB {load_path}")
-    binary.write(str(binary_path))
+def strip_slice_code_signature(data_ba, base):
+    magic = struct.unpack_from('<I', data_ba, base)[0]
+    if magic != MH_MAGIC_64:
+        return False
+    ncmds = struct.unpack_from('<I', data_ba, base + 16)[0]
+    sizeofcmds = struct.unpack_from('<I', data_ba, base + 20)[0]
+    lc_start = base + 32
+    cmd_off = lc_start
+    cs_off = None
+    cs_size = None
+    for _ in range(ncmds):
+        cmd_type, cmd_size = struct.unpack_from('<II', data_ba, cmd_off)
+        if cmd_type == LC_CODE_SIGNATURE:
+            cs_off = cmd_off
+            cs_size = cmd_size
+            break
+        cmd_off += cmd_size
+    if cs_off is None:
+        return False
+    tail_start = cs_off + cs_size
+    tail_end = lc_start + sizeofcmds
+    tail = bytes(data_ba[tail_start:tail_end])
+    data_ba[cs_off:cs_off + len(tail)] = tail
+    zero_start = cs_off + len(tail)
+    data_ba[zero_start:zero_start + cs_size] = b'\0' * cs_size
+    struct.pack_into('<I', data_ba, base + 16, ncmds - 1)
+    struct.pack_into('<I', data_ba, base + 20, sizeofcmds - cs_size)
+    return True
+
+
+def strip_code_signature_inplace(filepath):
+    with open(filepath, 'rb') as f:
+        data = bytearray(f.read())
+    first4 = bytes(data[:4])
+    magic_be = struct.unpack('>I', first4)[0]
+    magic_le = struct.unpack('<I', first4)[0]
+    changed = False
+    if magic_be in (FAT_MAGIC, FAT_MAGIC_64):
+        is_64_fat = magic_be == FAT_MAGIC_64
+        nfat_arch = struct.unpack('>I', data[4:8])[0]
+        arch_size = 32 if is_64_fat else 20
+        for i in range(nfat_arch):
+            arch_off = 8 + i * arch_size
+            if is_64_fat:
+                _, _, offset, _, _, _ = struct.unpack('>iiQQII', data[arch_off:arch_off + arch_size])
+            else:
+                _, _, offset, _, _ = struct.unpack('>iiIII', data[arch_off:arch_off + arch_size])
+            if strip_slice_code_signature(data, offset):
+                changed = True
+                print(f"        stripped LC_CODE_SIGNATURE from slice at offset {offset}")
+    elif magic_le in (MH_MAGIC_64, MH_CIGAM_64):
+        if strip_slice_code_signature(data, 0):
+            changed = True
+            print(f"        stripped LC_CODE_SIGNATURE (thin)")
+    if changed:
+        with open(filepath, 'wb') as f:
+            f.write(bytes(data))
+    return changed
+
+
+def patch_slice_add_dylib(data_ba, base, dylib_path):
+    magic = struct.unpack_from('<I', data_ba, base)[0]
+    if magic == MH_CIGAM_64:
+        raise RuntimeError("big-endian 64-bit mach-o not supported")
+    if magic != MH_MAGIC_64:
+        raise RuntimeError(f"not a 64-bit mach-o: magic={hex(magic)}")
+
+    ncmds = struct.unpack_from('<I', data_ba, base + 16)[0]
+    sizeofcmds = struct.unpack_from('<I', data_ba, base + 20)[0]
+
+    lc_start = base + 32
+    lc_end = lc_start + sizeofcmds
+
+    first_text_section_fileoff = None
+    cmd_off = lc_start
+    dylib_cmd_types = (LC_LOAD_DYLIB, 0x18, 0x1F, 0x24, 0x80000018, 0x80000022)
+    existing = []
+    for _ in range(ncmds):
+        cmd_type, cmd_size = struct.unpack_from('<II', data_ba, cmd_off)
+        if cmd_type in dylib_cmd_types:
+            name_off = struct.unpack_from('<I', data_ba, cmd_off + 8)[0]
+            ns = cmd_off + name_off
+            ne = ns
+            while data_ba[ne] != 0:
+                ne += 1
+            existing.append(data_ba[ns:ne].decode('utf-8', errors='replace'))
+        if cmd_type == LC_SEGMENT_64:
+            seg_name = bytes(data_ba[cmd_off + 8:cmd_off + 24]).rstrip(b'\0')
+            if seg_name == b'__TEXT':
+                nsects = struct.unpack_from('<I', data_ba, cmd_off + 64)[0]
+                for s in range(nsects):
+                    sec_off = cmd_off + 72 + s * 80
+                    sec_fileoff = struct.unpack_from('<I', data_ba, sec_off + 48)[0]
+                    if sec_fileoff > 0:
+                        if first_text_section_fileoff is None or sec_fileoff < first_text_section_fileoff:
+                            first_text_section_fileoff = sec_fileoff
+        cmd_off += cmd_size
+
+    if dylib_path in existing:
+        return False
+
+    if first_text_section_fileoff is None:
+        raise RuntimeError("no __TEXT section fileoff found")
+
+    path_bytes = dylib_path.encode('utf-8') + b'\0'
+    path_padded = (len(path_bytes) + 7) & ~7
+    cmd_total = 24 + path_padded
+
+    free = (base + first_text_section_fileoff) - lc_end
+    if cmd_total > free:
+        raise RuntimeError(f"not enough header padding: free={free}, need={cmd_total}")
+
+    load_cmd = struct.pack('<IIIIII',
+        LC_LOAD_WEAK_DYLIB, cmd_total, 24, 2, 0x00000000, 0x00000000)
+    load_cmd += path_bytes + b'\0' * (path_padded - len(path_bytes))
+
+    data_ba[lc_end:lc_end + cmd_total] = load_cmd
+    struct.pack_into('<I', data_ba, base + 16, ncmds + 1)
+    struct.pack_into('<I', data_ba, base + 20, sizeofcmds + cmd_total)
+    return True
+
+
+def insert_dylib_inplace(filepath, dylib_path):
+    with open(filepath, 'rb') as f:
+        data = bytearray(f.read())
+
+    first4 = bytes(data[:4])
+    magic_be = struct.unpack('>I', first4)[0]
+    magic_le = struct.unpack('<I', first4)[0]
+
+    changed_any = False
+    if magic_be in (FAT_MAGIC, FAT_MAGIC_64):
+        is_64_fat = magic_be == FAT_MAGIC_64
+        nfat_arch = struct.unpack('>I', data[4:8])[0]
+        arch_size = 32 if is_64_fat else 20
+        for i in range(nfat_arch):
+            arch_off = 8 + i * arch_size
+            if is_64_fat:
+                cputype, cpusubtype, offset, size, align, reserved = struct.unpack('>iiQQII', data[arch_off:arch_off + arch_size])
+            else:
+                cputype, cpusubtype, offset, size, align = struct.unpack('>iiIII', data[arch_off:arch_off + arch_size])
+            print(f"      slice cpu={cputype} subtype={cpusubtype}")
+            if patch_slice_add_dylib(data, offset, dylib_path):
+                changed_any = True
+                print(f"        added LC_LOAD_DYLIB")
+            else:
+                print(f"        already linked, skipped")
+    elif magic_le in (MH_MAGIC_64, MH_CIGAM_64):
+        if patch_slice_add_dylib(data, 0, dylib_path):
+            changed_any = True
+            print(f"      added LC_LOAD_DYLIB (thin)")
+        else:
+            print(f"      already linked")
+    else:
+        raise RuntimeError(f"unknown magic: {hex(magic_be)} / {hex(magic_le)}")
+
+    if changed_any:
+        with open(filepath, 'wb') as f:
+            f.write(bytes(data))
+    return changed_any
 
 
 def zip_app(ipa_root, out_ipa):
@@ -200,6 +358,14 @@ def main():
         shutil.rmtree(cs_dst)
     shutil.copytree(cs_src, cs_dst)
     print(f"      staged {cs_dst.name}")
+    cs_sigdir = cs_dst / "_CodeSignature"
+    if cs_sigdir.exists():
+        shutil.rmtree(cs_sigdir)
+        print(f"      removed CydiaSubstrate.framework/_CodeSignature/")
+    cs_binary = cs_dst / "CydiaSubstrate"
+    if cs_binary.exists():
+        if strip_code_signature_inplace(cs_binary):
+            print(f"      CydiaSubstrate binary signature stripped")
 
     print("[4/6] staging dylibs and bundles into Frameworks/")
     dylibs = find_dylibs(work / "deb")
@@ -222,7 +388,7 @@ def main():
         shutil.copytree(b, dest)
         print(f"      staged bundle {b.name}")
 
-    print("[5/6] rewriting dylib load paths for sideload")
+    print("[5/6] rewriting dylib load paths (LIEF, safe on no-fixup dylibs)")
     rewrites = {
         "/Library/Frameworks/CydiaSubstrate.framework/CydiaSubstrate":
             "@executable_path/Frameworks/CydiaSubstrate.framework/CydiaSubstrate",
@@ -237,10 +403,25 @@ def main():
         print(f"    {dy.name}:")
         rewrite_dylib_paths(dy, rewrites, new_id=f"@executable_path/Frameworks/{dy.name}")
 
-    print("[6/6] injecting load commands into main binary")
+    print("[6/6] injecting load commands into main binary (in-place, byte-level)")
     print(f"    {binary.name}:")
     for dy in staged_dylibs:
-        inject_load(binary, f"@executable_path/Frameworks/{dy.name}")
+        insert_dylib_inplace(binary, f"@rpath/{dy.name}")
+
+    print("[cleanup] stripping dylib code signatures and app-level _CodeSignature")
+    for dy in staged_dylibs:
+        if strip_code_signature_inplace(dy):
+            print(f"      stripped signature from {dy.name}")
+    cs_dir = app / "_CodeSignature"
+    if cs_dir.exists():
+        shutil.rmtree(cs_dir)
+        print(f"      removed {cs_dir.name}/")
+    for prov in app.glob("embedded.mobileprovision"):
+        prov.unlink()
+        print(f"      removed {prov.name}")
+    for prov in app.glob("*.provisionprofile"):
+        prov.unlink()
+        print(f"      removed {prov.name}")
 
     print("\n[pack] zipping IPA")
     zip_app(work / "ipa", out_path)

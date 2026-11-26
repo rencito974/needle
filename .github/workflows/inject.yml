@@ -1,0 +1,63 @@
+name: Inject
+
+on:
+  workflow_dispatch:
+    inputs:
+      spotify_ipa_url:
+        description: "Direct download URL to the decrypted Spotify IPA (leave blank to pull from the spotify-cache release)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  inject:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cyan and deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl unzip python3-pip
+          pip3 install --upgrade cyan
+
+      - name: Download Needle .deb from latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p work
+          gh release download latest -R ${{ github.repository }} -p "Needle-latest.deb" -D work --clobber
+          ls -la work/
+
+      - name: Fetch Spotify IPA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SPOTIFY_URL: ${{ inputs.spotify_ipa_url }}
+        run: |
+          mkdir -p work
+          if [ -n "$SPOTIFY_URL" ]; then
+            echo "Downloading from provided URL"
+            curl -L -o work/spotify.ipa "$SPOTIFY_URL"
+          else
+            echo "Pulling from spotify-cache release"
+            gh release download spotify-cache -R ${{ github.repository }} -p "*.ipa" -D work --clobber
+            src=$(ls work/*.ipa | grep -v Needle-Spotify | head -1)
+            mv "$src" work/spotify.ipa
+          fi
+          ls -la work/
+          file work/spotify.ipa
+
+      - name: Run cyan
+        run: |
+          cd work
+          python3 -m cyan -i spotify.ipa -o Needle-Spotify.ipa -f Needle-latest.deb
+          ls -la Needle-Spotify.ipa
+
+      - name: Publish Needle-Spotify.ipa
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload latest -R ${{ github.repository }} work/Needle-Spotify.ipa --clobber
+          gh release view latest -R ${{ github.repository }} --json assets --jq '.assets[] | .name + " " + (.size|tostring)'
