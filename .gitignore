@@ -3,3 +3,6 @@ Needle/Info.plist
 build/
 out/
 .DS_Store
+Tweak/packages/
+Tweak/.theos/
+Tweak/obj/

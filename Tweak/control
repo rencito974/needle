@@ -1,0 +1,9 @@
+Package: com.renn.needle
+Name: Needle
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: Spotify with real shuffle, album colored UI, premium flags on, Apple Music style lockscreen art.
+Maintainer: Renzo
+Author: Renzo
+Section: Tweaks
+Depends: mobilesubstrate (>= 0.9.5000), firmware (>= 15.0), preferenceloader

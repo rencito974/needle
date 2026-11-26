@@ -1,0 +1,21 @@
+TARGET := iphone:clang:latest:15.0
+INSTALL_TARGET_PROCESSES = Spotify
+
+include $(THEOS)/makefiles/common.mk
+
+TWEAK_NAME = Needle
+
+Needle_FILES = Prefs.x Premium.x Shuffle.x Artwork.x Theme.x Lockscreen.x Scrobble.x Settings.x
+Needle_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-nullability-completeness
+Needle_FRAMEWORKS = UIKit MediaPlayer AVFoundation CoreGraphics ImageIO Foundation
+Needle_LDFLAGS = -framework Security
+
+ifeq ($(NEEDLE_PROBE),1)
+Needle_FILES += Probe.x
+Needle_CFLAGS += -DNEEDLE_PROBE
+endif
+
+include $(THEOS_MAKE_PATH)/tweak.mk
+
+SUBPROJECTS += Preferences
+include $(THEOS_MAKE_PATH)/aggregate.mk

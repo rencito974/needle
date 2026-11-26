@@ -1,16 +1,48 @@
 # Needle
 
-A Spotify client for iPhone with a real shuffle, a queue you can edit, synced lyrics and album-colored playback. It drives the official Spotify app through the Web API, so the Spotify app has to be installed and the account needs Premium.
+A Spotify tweak for iPhone. Hooks the real Spotify binary at runtime to turn on premium flags, replace the weighted shuffle with Fisher Yates, tint the Now Playing surface with the album's dominant color, and push high-resolution artwork to the lockscreen the way Apple Music does.
 
-## Setup
+Works on jailbroken iOS 15 and up as a classic MobileSubstrate tweak. On stock iOS, the tweak dylib injects into a decrypted Spotify IPA with cyan or Sideloadly and sideloads through AltStore or a regular signing cert.
 
-1. Create an app at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) with the Web API enabled and the redirect URI `needle://callback`.
-2. Put its client ID in `Needle/Config.swift`.
-3. Push to `main`. GitHub Actions builds an unsigned `Needle.ipa` and attaches it to the `latest` release.
-4. Sign the IPA with your certificate and install it.
+## Build
 
-## Building
+On Ubuntu or macOS with [Theos](https://theos.dev) installed:
 
-The Xcode project is generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen) from `project.yml`, so there is no `.xcodeproj` in the repo. On a Mac: `xcodegen generate`, then open `Needle.xcodeproj`.
+```
+cd Tweak
+make package FINALPACKAGE=1
+```
 
-Lyrics come from [LRCLIB](https://lrclib.net). Spotify's Web API only lists the songs of playlists you own, so playlists made by other people are read from Spotify's public embed page, which shows their first 100 songs; playing them still goes through the full playlist.
+The output lands in `Tweak/packages/com.renn.needle_1.0.0_iphoneos-arm64.deb`. GitHub Actions does the same on every push to `main` and uploads the .deb to the `latest` release.
+
+## Install
+
+### Jailbroken
+
+Open the .deb in Sileo or Zebra, respring.
+
+### Stock iOS
+
+1. Grab a decrypted Spotify IPA (same version you want to patch).
+2. Unpack the .deb: `dpkg-deb -x Needle-latest.deb needle`
+3. Pull the dylib: `needle/Library/MobileSubstrate/DynamicLibraries/Needle.dylib`
+4. Inject into the IPA:
+   ```
+   pip install cyan
+   cyan -i Spotify.ipa -o Needle-Spotify.ipa -f Needle.dylib
+   ```
+5. Sign and install with Sideloadly, AltStore or your own cert.
+
+## Features
+
+- Premium flags on (no ads, unlimited skips, any track from any playlist, scrubbing, 320k, Spotify Connect).
+- Real shuffle. Fisher Yates on the queue instead of the weighted algorithm.
+- Album-colored Now Playing. Palette extracted from the artwork, animates on every track change, flows into the tab bar.
+- Lockscreen takeover. Artwork pushed to `MPNowPlayingInfoCenter` at 3000x3000 with Apple Music's service identifier set, so iOS gives it the big-art treatment.
+- Telemetry calls neutered (see `HOOKS.md`).
+
+See `Tweak/HOOKS.md` for which selectors need a class-dump pass against your exact Spotify version before the hook will land.
+
+## Legacy
+
+The original Web-API client lives in the `Needle/` folder with its `project.yml`. Kept for reference. The tweak path in `Tweak/` is where new work goes.

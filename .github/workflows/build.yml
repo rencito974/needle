@@ -9,44 +9,39 @@ permissions:
   contents: write
 
 jobs:
-  ipa:
-    runs-on: macos-15
+  tweak:
+    runs-on: ubuntu-latest
+    env:
+      THEOS: /home/runner/theos
     steps:
       - uses: actions/checkout@v4
 
-      - name: Generate project
+      - name: Install build deps
+        run: sudo apt-get update && sudo apt-get install -y curl git perl build-essential fakeroot dpkg xz-utils
+
+      - name: Set up Theos
         run: |
-          brew install xcodegen
-          xcodegen generate
-          xcodebuild -version
+          git clone --recursive https://github.com/theos/theos.git $THEOS
+          curl -L https://github.com/theos/sdks/archive/master.tar.gz | tar xz -C $THEOS/sdks --strip 1
 
       - name: Build
-        run: |
-          xcodebuild \
-            -project Needle.xcodeproj \
-            -target Needle \
-            -configuration Release \
-            -sdk iphoneos \
-            SYMROOT="$PWD/build" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build
+        working-directory: Tweak
+        run: make package FINALPACKAGE=1
 
-      - name: Package
+      - name: Rename artifact
+        working-directory: Tweak/packages
         run: |
-          mkdir -p out/Payload
-          cp -R build/Release-iphoneos/Needle.app out/Payload/
-          cd out && zip -qry Needle.ipa Payload
+          deb=$(ls *.deb | head -1)
+          cp "$deb" Needle-latest.deb
 
       - uses: actions/upload-artifact@v4
         with:
           name: Needle
-          path: out/Needle.ipa
+          path: Tweak/packages/*.deb
 
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view latest >/dev/null 2>&1 || gh release create latest --title "Latest build" --notes "Unsigned. Sign it with your certificate before installing."
-          gh release upload latest out/Needle.ipa --clobber
+          gh release view latest >/dev/null 2>&1 || gh release create latest --title "Latest build" --notes "Install the .deb through Sileo on a jailbroken device, or extract the dylib and inject with cyan into a decrypted Spotify IPA for sideload."
+          gh release upload latest Tweak/packages/Needle-latest.deb --clobber

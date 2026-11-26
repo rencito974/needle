@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Needle Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07080c;
+    --panel: #0f1116;
+    --ink: #ffffff;
+    --mute: rgba(255,255,255,0.55);
+    --soft: rgba(255,255,255,0.08);
+    --accent: #ff7a3d;
+    --accent-2: #ff3d8a;
+    --lock: #6a7fb8;
+  }
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: 'Inter', -apple-system, system-ui, sans-serif; min-height: 100vh; }
+  body { background: radial-gradient(1200px 600px at 20% 0%, rgba(255,122,61,0.18), transparent 60%), radial-gradient(1000px 600px at 80% 100%, rgba(106,127,184,0.18), transparent 60%), var(--bg); }
+
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 48px 32px 96px; }
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 48px; gap: 24px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand .dot { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 8px 24px rgba(255,61,138,0.4); }
+  .brand h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
+  .brand .sub { color: var(--mute); font-size: 13px; margin-top: 2px; }
+  .chip { padding: 8px 14px; border-radius: 999px; background: var(--soft); color: var(--mute); font-size: 13px; font-weight: 500; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; align-items: start; }
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; place-items: center; } }
+
+  .col { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .col .label { font-size: 13px; color: var(--mute); font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase; }
+
+  .phone {
+    width: 360px;
+    height: 780px;
+    border-radius: 54px;
+    background: #000;
+    position: relative;
+    box-shadow:
+      0 0 0 10px #1a1a1e,
+      0 0 0 11px #2b2b31,
+      0 40px 80px rgba(0,0,0,0.6),
+      0 10px 30px rgba(255,122,61,0.08);
+    overflow: hidden;
+  }
+  .island {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 34px; background: #000; border-radius: 20px; z-index: 50;
+  }
+  .status {
+    position: absolute; top: 18px; left: 0; right: 0; height: 24px;
+    display: flex; justify-content: space-between; padding: 0 28px; align-items: center;
+    font-size: 15px; font-weight: 600; z-index: 10; color: #fff;
+  }
+  .status .right { display: flex; gap: 6px; align-items: center; }
+  .status svg { width: 16px; height: 11px; }
+
+  .screen { position: absolute; inset: 0; border-radius: 54px; overflow: hidden; }
+
+  .now-bg {
+    background:
+      radial-gradient(600px 400px at 50% 0%, rgba(255,122,61,0.55), transparent 55%),
+      linear-gradient(180deg, #4a1a0c 0%, #1a0906 55%, #050202 100%);
+  }
+  .now-content { position: absolute; inset: 0; padding: 60px 28px 28px; display: flex; flex-direction: column; }
+  .pill-top { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; margin-bottom: 36px; }
+  .pill-btn { width: 36px; height: 36px; border-radius: 12px; background: rgba(255,255,255,0.1); display: grid; place-items: center; backdrop-filter: blur(20px); }
+  .pill-mid { display: flex; flex-direction: column; align-items: center; }
+  .pill-mid .from { font-size: 11px; color: rgba(255,255,255,0.65); letter-spacing: 0.15em; text-transform: uppercase; }
+  .pill-mid .ctx { font-size: 14px; font-weight: 600; margin-top: 3px; }
+
+  .art-wrap { display: grid; place-items: center; margin: 12px 0 28px; }
+  .art {
+    width: 260px; height: 260px; border-radius: 22px;
+    background: linear-gradient(135deg, #ff9d59 0%, #ff4b7a 55%, #8a2a6b 100%);
+    position: relative; overflow: hidden;
+    box-shadow: 0 30px 60px rgba(255,61,122,0.35), 0 10px 20px rgba(0,0,0,0.5);
+  }
+  .art::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(400px 200px at 30% 20%, rgba(255,255,255,0.3), transparent 50%);
+  }
+  .art .sil {
+    position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+    width: 180px; height: 180px;
+    background: radial-gradient(circle at 50% 40%, rgba(0,0,0,0.0) 30%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.75) 100%);
+    border-radius: 50% 50% 0 0;
+  }
+
+  .track-row { display: flex; justify-content: space-between; align-items: flex-start; }
+  .track-info .t { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .track-info .a { font-size: 15px; color: rgba(255,255,255,0.7); margin-top: 4px; }
+  .heart { width: 32px; height: 32px; display: grid; place-items: center; color: rgba(255,255,255,0.85); }
+
+  .progress { margin-top: 22px; }
+  .bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.18); position: relative; }
+  .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 38%; background: #fff; border-radius: 2px; }
+  .bar .knob { position: absolute; left: 38%; top: 50%; transform: translate(-50%, -50%); width: 12px; height: 12px; background: #fff; border-radius: 50%; }
+  .times { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: rgba(255,255,255,0.55); font-variant-numeric: tabular-nums; }
+
+  .controls { margin-top: 24px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; }
+  .ctl { width: 42px; height: 42px; display: grid; place-items: center; color: #fff; opacity: 0.9; }
+  .play { width: 72px; height: 72px; border-radius: 50%; background: #fff; display: grid; place-items: center; color: #4a1a0c; box-shadow: 0 10px 30px rgba(255,255,255,0.25); }
+
+  .bottom-bar { margin-top: 28px; display: flex; justify-content: space-between; align-items: center; color: rgba(255,255,255,0.85); font-size: 13px; }
+  .bottom-bar .left { display: flex; align-items: center; gap: 10px; }
+  .bottom-bar .right { display: flex; gap: 20px; }
+
+  .lock-bg {
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.85) 100%),
+      radial-gradient(600px 500px at 50% 45%, rgba(130,150,210,0.4), transparent 60%),
+      linear-gradient(180deg, #1a2440 0%, #0a0f1f 60%, #050710 100%);
+  }
+  .lock-art {
+    position: absolute; inset: 60px 24px 220px 24px; border-radius: 28px; overflow: hidden;
+    background: linear-gradient(140deg, #8fb0e8 0%, #5a7ab3 40%, #2a3a5e 80%);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+  }
+  .lock-art::after {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(400px 300px at 70% 30%, rgba(255,255,255,0.25), transparent 60%),
+      radial-gradient(300px 400px at 30% 70%, rgba(0,0,0,0.3), transparent 60%);
+  }
+  .lock-figure {
+    position: absolute; left: 50%; top: 55%; transform: translate(-50%, -50%);
+    width: 170px; height: 170px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 40%, rgba(0,0,0,0.0) 10%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.85) 100%);
+  }
+  .lock-time { position: absolute; top: 68px; left: 0; right: 0; text-align: center; font-size: 76px; font-weight: 300; letter-spacing: -0.04em; text-shadow: 0 4px 24px rgba(0,0,0,0.5); z-index: 5; }
+  .lock-date { position: absolute; top: 60px; left: 0; right: 0; text-align: center; font-size: 15px; font-weight: 500; opacity: 0.9; z-index: 5; }
+  .lock-info { position: absolute; left: 24px; right: 24px; bottom: 120px; display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 20px; background: rgba(255,255,255,0.1); backdrop-filter: blur(24px); }
+  .lock-info .mini { width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #8fb0e8, #2a3a5e); }
+  .lock-info .meta { flex: 1; }
+  .lock-info .meta .t { font-size: 15px; font-weight: 600; }
+  .lock-info .meta .a { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+  .lock-info .play-mini { width: 36px; height: 36px; display: grid; place-items: center; color: #fff; }
+  .lock-bar { position: absolute; left: 24px; right: 24px; bottom: 90px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.2); }
+  .lock-bar .f { position: absolute; left: 0; top: 0; bottom: 0; width: 44%; background: rgba(255,255,255,0.9); border-radius: 2px; }
+  .flash { position: absolute; bottom: 42px; left: 24px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.12); display: grid; place-items: center; backdrop-filter: blur(20px); }
+  .cam { position: absolute; bottom: 42px; right: 24px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.12); display: grid; place-items: center; backdrop-filter: blur(20px); }
+  .home-ind { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 130px; height: 5px; background: rgba(255,255,255,0.4); border-radius: 3px; }
+
+  .set-bg { background: linear-gradient(180deg, #1a1004 0%, #0a0705 40%, #050404 100%); }
+  .set-header { padding: 60px 24px 12px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .set-header h2 { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; margin: 0; }
+  .set-header .done { font-size: 16px; font-weight: 600; color: var(--accent); }
+  .set-scroll { position: absolute; top: 120px; left: 0; right: 0; bottom: 0; overflow: hidden; padding: 0 16px; }
+  .set-section { margin-bottom: 20px; }
+  .set-section .sh { font-size: 12px; text-transform: uppercase; color: rgba(255,255,255,0.5); padding: 0 12px 8px; letter-spacing: 0.08em; font-weight: 600; }
+  .set-section .sf { font-size: 11px; color: rgba(255,255,255,0.45); padding: 8px 12px 0; line-height: 1.4; }
+  .cell-group { background: rgba(255,255,255,0.05); border-radius: 14px; overflow: hidden; backdrop-filter: blur(20px); }
+  .cell { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .cell:last-child { border-bottom: none; }
+  .cell .lbl { font-size: 15px; font-weight: 500; }
+  .cell .val { font-size: 13px; color: rgba(255,255,255,0.5); font-family: ui-monospace, monospace; }
+  .cell.btn { color: var(--accent); justify-content: center; font-weight: 600; }
+  .sw { width: 44px; height: 26px; border-radius: 14px; background: var(--accent); position: relative; transition: background 0.2s; }
+  .sw::after { content: ""; position: absolute; left: 20px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transition: left 0.2s; }
+  .sw.off { background: rgba(255,255,255,0.15); }
+  .sw.off::after { left: 3px; }
+
+  .legend { margin-top: 48px; background: var(--panel); border-radius: 20px; padding: 24px 28px; border: 1px solid var(--soft); }
+  .legend h3 { margin: 0 0 12px; font-size: 16px; font-weight: 700; }
+  .legend ul { margin: 0; padding: 0 0 0 20px; color: var(--mute); font-size: 14px; line-height: 1.7; }
+  .legend ul li b { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <div class="dot"></div>
+      <div>
+        <h1>Needle</h1>
+        <div class="sub">Spotify tweak preview</div>
+      </div>
+    </div>
+    <div class="chip">v1.0 mockup, not live</div>
+  </div>
+
+  <div class="grid">
+    <div class="col">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status">
+          <span>9:41</span>
+          <span class="right">
+            <svg viewBox="0 0 16 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#fff"/><rect x="4" y="4" width="3" height="7" rx="1" fill="#fff"/><rect x="8" y="2" width="3" height="9" rx="1" fill="#fff"/><rect x="12" y="0" width="3" height="11" rx="1" fill="#fff"/></svg>
+            <span style="font-size:12px;font-weight:600;letter-spacing:0.5px">5G</span>
+            <svg viewBox="0 0 27 13"><rect x="1" y="1" width="22" height="11" rx="3" fill="none" stroke="#fff" stroke-width="1"/><rect x="3" y="3" width="18" height="7" rx="1.5" fill="#fff"/><rect x="24" y="4.5" width="2" height="4" rx="0.5" fill="#fff"/></svg>
+          </span>
+        </div>
+        <div class="screen now-bg">
+          <div class="now-content">
+            <div class="pill-top">
+              <div class="pill-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <div class="pill-mid">
+                <div class="from">Playing from album</div>
+                <div class="ctx">Blonde</div>
+              </div>
+              <div class="pill-btn">
+                <svg width="4" height="16" viewBox="0 0 4 16" fill="#fff"><circle cx="2" cy="2" r="2"/><circle cx="2" cy="8" r="2"/><circle cx="2" cy="14" r="2"/></svg>
+              </div>
+            </div>
+            <div class="art-wrap">
+              <div class="art"><div class="sil"></div></div>
+            </div>
+            <div class="track-row">
+              <div class="track-info">
+                <div class="t">Nikes</div>
+                <div class="a">Frank Ocean</div>
+              </div>
+              <div class="heart">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+              </div>
+            </div>
+            <div class="progress">
+              <div class="bar"><div class="fill"></div><div class="knob"></div></div>
+              <div class="times"><span>1:58</span><span>5:14</span></div>
+            </div>
+            <div class="controls">
+              <div class="ctl"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M4 4h2v16H4zm14.5 0L7 12l11.5 8V4z"/></svg></div>
+              <div class="ctl"><svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6l-8.5 6z"/></svg></div>
+              <div class="play"><svg width="28" height="28" viewBox="0 0 24 24" fill="#4a1a0c"><path d="M8 5v14l11-7L8 5z"/></svg></div>
+              <div class="ctl"><svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M16 6h2v12h-2zM6 6v12l8.5-6L6 6z"/></svg></div>
+              <div class="ctl"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M17 1l4 4-4 4M21 5H7a4 4 0 00-4 4v2M7 23l-4-4 4-4M3 19h14a4 4 0 004-4v-2"/></svg></div>
+            </div>
+            <div class="bottom-bar">
+              <div class="left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3zm7 10a7 7 0 01-14 0H3a9 9 0 008 8.9V23h2v-2.1a9 9 0 008-8.9h-2z"/></svg>
+                <span>Living Room</span>
+              </div>
+              <div class="right">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M3 3h18v2H3zm0 8h12v2H3zm0 8h18v2H3z"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M4 6h16v2H4zm0 5h10v2H4zm0 5h16v2H4z"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="label">Now Playing · album colored</div>
+    </div>
+
+    <div class="col">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status">
+          <span>9:41</span>
+          <span class="right">
+            <svg viewBox="0 0 16 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#fff"/><rect x="4" y="4" width="3" height="7" rx="1" fill="#fff"/><rect x="8" y="2" width="3" height="9" rx="1" fill="#fff"/><rect x="12" y="0" width="3" height="11" rx="1" fill="#fff" fill-opacity="0.4"/></svg>
+            <span style="font-size:12px;font-weight:600">4G</span>
+            <svg viewBox="0 0 27 13"><rect x="1" y="1" width="22" height="11" rx="3" fill="none" stroke="#fff" stroke-width="1"/><rect x="3" y="3" width="12" height="7" rx="1.5" fill="#fff"/><rect x="24" y="4.5" width="2" height="4" rx="0.5" fill="#fff"/></svg>
+          </span>
+        </div>
+        <div class="screen lock-bg">
+          <div class="lock-date">Tuesday, November 25</div>
+          <div class="lock-time">9:41</div>
+          <div class="lock-art"><div class="lock-figure"></div></div>
+          <div class="lock-bar"><div class="f"></div></div>
+          <div class="lock-info">
+            <div class="mini"></div>
+            <div class="meta">
+              <div class="t">Nikes</div>
+              <div class="a">Frank Ocean</div>
+            </div>
+            <div class="play-mini">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
+            </div>
+          </div>
+          <div class="flash">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z"/></svg>
+          </div>
+          <div class="cam">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 15.2a3.2 3.2 0 110-6.4 3.2 3.2 0 010 6.4zM9 2L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2h-3.17L15 2H9z"/></svg>
+          </div>
+          <div class="home-ind"></div>
+        </div>
+      </div>
+      <div class="label">Lockscreen · Apple Music takeover</div>
+    </div>
+
+    <div class="col">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status">
+          <span>9:41</span>
+          <span class="right">
+            <svg viewBox="0 0 16 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#fff"/><rect x="4" y="4" width="3" height="7" rx="1" fill="#fff"/><rect x="8" y="2" width="3" height="9" rx="1" fill="#fff"/><rect x="12" y="0" width="3" height="11" rx="1" fill="#fff"/></svg>
+            <svg viewBox="0 0 27 13"><rect x="1" y="1" width="22" height="11" rx="3" fill="none" stroke="#fff" stroke-width="1"/><rect x="3" y="3" width="18" height="7" rx="1.5" fill="#fff"/><rect x="24" y="4.5" width="2" height="4" rx="0.5" fill="#fff"/></svg>
+          </span>
+        </div>
+        <div class="screen set-bg">
+          <div class="set-header">
+            <h2>Needle</h2>
+            <div class="done">Done</div>
+          </div>
+          <div class="set-scroll">
+            <div class="set-section">
+              <div class="sh">Premium flags</div>
+              <div class="cell-group">
+                <div class="cell"><span class="lbl">Premium flags on</span><div class="sw"></div></div>
+                <div class="cell"><span class="lbl">Block ads</span><div class="sw"></div></div>
+                <div class="cell"><span class="lbl">Block telemetry</span><div class="sw"></div></div>
+              </div>
+            </div>
+            <div class="set-section">
+              <div class="sh">Playback</div>
+              <div class="cell-group">
+                <div class="cell"><span class="lbl">Fisher Yates shuffle</span><div class="sw"></div></div>
+                <div class="cell"><span class="lbl">Disable Canvas video</span><div class="sw off"></div></div>
+              </div>
+            </div>
+            <div class="set-section">
+              <div class="sh">Look</div>
+              <div class="cell-group">
+                <div class="cell"><span class="lbl">Album colored Now Playing</span><div class="sw"></div></div>
+                <div class="cell"><span class="lbl">Apple Music lockscreen art</span><div class="sw"></div></div>
+              </div>
+            </div>
+            <div class="set-section">
+              <div class="sh">Last.fm scrobble</div>
+              <div class="cell-group">
+                <div class="cell"><span class="lbl">Scrobble plays</span><div class="sw"></div></div>
+                <div class="cell"><span class="lbl">API key</span><span class="val">b3f8...9c21</span></div>
+                <div class="cell"><span class="lbl">Shared secret</span><span class="val">••••••••</span></div>
+                <div class="cell"><span class="lbl">Session key</span><span class="val">4d2a...ef71</span></div>
+                <div class="cell btn">Open Last.fm sign in</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="label">In-app settings · long press mini bar</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <h3>What each hook does on screen</h3>
+    <ul>
+      <li><b>Album colored Now Playing</b> pulls the dominant color off the artwork and flows it through the background, the knob, the bottom bar, and the tab tint. Different tracks change the palette live.</li>
+      <li><b>Apple Music lockscreen</b> pushes the artwork to MPNowPlayingInfoCenter at 3000x3000 with the com.apple.Music service identifier. iOS gives it the big-art lockscreen treatment, same as the stock Music app.</li>
+      <li><b>In-app settings</b> opens over Spotify on a long press of the mini bar. Writes land in both sandbox defaults and CFPreferences, so a hook from either path reads the same keys.</li>
+      <li><b>Premium flags</b> return true for ads, skip limit, scrubbing, extreme quality and Spotify Connect. Fisher Yates replaces the weighted shuffle.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

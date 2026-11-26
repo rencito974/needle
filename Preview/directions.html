@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Needle Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; }
+  html, body { background: #0a0a0c; color: #fff; font-family: 'Inter', -apple-system, system-ui, sans-serif; min-height: 100vh; }
+  body { padding: 64px 48px 120px; }
+
+  .head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 64px; max-width: 1600px; margin-left: auto; margin-right: auto; }
+  .head h1 { font-size: 48px; font-weight: 300; letter-spacing: -0.04em; font-family: 'Instrument Serif', serif; font-style: italic; }
+  .head h1 em { font-style: normal; font-family: 'Inter', sans-serif; font-weight: 700; }
+  .head .prompt { color: rgba(255,255,255,0.45); font-size: 13px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; }
+
+  .rack { display: grid; grid-template-columns: repeat(4, 1fr); gap: 56px; max-width: 1600px; margin: 0 auto; }
+  @media (max-width: 1400px) { .rack { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 760px) { .rack { grid-template-columns: 1fr; } }
+
+  .slot { display: flex; flex-direction: column; align-items: center; gap: 24px; }
+  .slot .tag { display: flex; align-items: baseline; gap: 10px; }
+  .slot .letter { font-size: 42px; font-weight: 300; font-family: 'Instrument Serif', serif; font-style: italic; color: rgba(255,255,255,0.9); line-height: 1; }
+  .slot .name { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; }
+  .slot .desc { font-size: 12px; color: rgba(255,255,255,0.4); text-align: center; max-width: 280px; line-height: 1.5; font-family: 'JetBrains Mono', monospace; letter-spacing: -0.01em; }
+
+  .phone { width: 300px; height: 650px; border-radius: 44px; background: #000; position: relative; overflow: hidden; box-shadow: 0 0 0 1.5px #1c1c20, 0 60px 100px rgba(0,0,0,0.5); }
+  .island { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 100px; height: 28px; background: #000; border-radius: 16px; z-index: 50; }
+  .screen { position: absolute; inset: 0; }
+  .time { position: absolute; top: 16px; left: 24px; font-size: 13px; font-weight: 600; z-index: 10; }
+  .ind { position: absolute; top: 16px; right: 24px; display: flex; gap: 4px; align-items: center; z-index: 10; }
+  .ind svg { height: 10px; width: auto; }
+  .home { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 108px; height: 4px; background: rgba(255,255,255,0.35); border-radius: 3px; z-index: 10; }
+
+  .immersive {
+    background:
+      radial-gradient(400px 500px at 50% 35%, rgba(255,180,100,0.45), transparent 60%),
+      radial-gradient(500px 400px at 80% 80%, rgba(200,40,80,0.4), transparent 60%),
+      linear-gradient(180deg, #2a1206 0%, #0a0503 100%);
+  }
+  .imm-figure {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 200px; height: 280px;
+  }
+  .imm-figure::before {
+    content: ""; position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+    width: 140px; height: 140px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 40%, #3a1a0e, #140804);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .imm-figure::after {
+    content: ""; position: absolute; left: 50%; top: 10%; transform: translateX(-50%);
+    width: 180px; height: 70px; border-radius: 90px 90px 20px 20px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.9), rgba(0,0,0,0.5));
+    box-shadow: inset 0 0 20px rgba(255,120,50,0.2);
+  }
+  .imm-shoulders {
+    position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+    width: 260px; height: 160px; border-radius: 50% 50% 0 0;
+    background: linear-gradient(180deg, #1a0a05 0%, transparent 100%);
+  }
+  .imm-top { position: absolute; top: 56px; left: 0; right: 0; text-align: center; z-index: 5; }
+  .imm-top .from { font-size: 10px; letter-spacing: 0.3em; color: rgba(255,255,255,0.5); font-weight: 500; }
+  .imm-top .ctx { font-size: 15px; font-weight: 600; margin-top: 6px; }
+  .imm-panel {
+    position: absolute; left: 16px; right: 16px; bottom: 28px;
+    padding: 20px 20px 18px; border-radius: 26px;
+    background: rgba(20,10,5,0.5); backdrop-filter: blur(30px);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .imm-panel .t { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .imm-panel .a { font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .imm-panel .bar { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.15); margin-top: 16px; position: relative; }
+  .imm-panel .bar::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 40%; background: rgba(255,180,100,0.95); border-radius: 2px; }
+  .imm-panel .row { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
+  .imm-panel .row .icn { font-size: 20px; color: rgba(255,255,255,0.85); display: grid; place-items: center; width: 32px; height: 32px; }
+  .imm-panel .row .play { width: 48px; height: 48px; border-radius: 50%; background: #fff; display: grid; place-items: center; color: #2a1206; }
+
+  .editorial { background: #050505; }
+  .ed-top { position: absolute; top: 52px; left: 24px; right: 24px; }
+  .ed-top .meta { font-size: 11px; letter-spacing: 0.25em; color: rgba(255,255,255,0.4); font-weight: 500; }
+  .ed-top .title { font-family: 'Instrument Serif', serif; font-size: 68px; font-weight: 400; line-height: 0.95; letter-spacing: -0.03em; margin-top: 18px; font-style: italic; }
+  .ed-top .artist { font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 24px; letter-spacing: 0.02em; }
+  .ed-chip { position: absolute; top: 320px; left: 24px; width: 72px; height: 72px; border-radius: 4px; overflow: hidden;
+    background: linear-gradient(135deg, #e8623a 0%, #a01d4e 100%); box-shadow: 0 10px 30px rgba(224,98,58,0.4); }
+  .ed-divider { position: absolute; top: 320px; left: 112px; right: 24px; height: 1px; background: rgba(255,255,255,0.1); }
+  .ed-nums { position: absolute; top: 340px; left: 112px; display: flex; gap: 16px; align-items: baseline; }
+  .ed-nums .cur { font-size: 48px; font-weight: 300; font-family: 'JetBrains Mono', monospace; letter-spacing: -0.04em; }
+  .ed-nums .of { font-size: 14px; color: rgba(255,255,255,0.4); font-family: 'JetBrains Mono', monospace; }
+  .ed-bar { position: absolute; top: 410px; left: 24px; right: 24px; height: 1px; background: rgba(255,255,255,0.08); }
+  .ed-bar::after { content: ""; position: absolute; left: 0; top: -0.5px; bottom: -0.5px; width: 38%; background: #e8623a; }
+  .ed-ctl { position: absolute; bottom: 100px; left: 24px; right: 24px; display: flex; align-items: center; justify-content: space-between; }
+  .ed-ctl .lab { font-size: 11px; letter-spacing: 0.25em; color: rgba(255,255,255,0.5); font-weight: 500; }
+  .ed-ctl .arrows { display: flex; gap: 32px; }
+  .ed-ctl .arrows .a { font-size: 32px; font-weight: 300; color: rgba(255,255,255,0.9); font-family: 'Instrument Serif', serif; cursor: pointer; }
+  .ed-ctl .play { width: 68px; height: 68px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.3); display: grid; place-items: center; }
+  .ed-ctl .play::after { content: ""; display: block; width: 0; height: 0; border-left: 14px solid #fff; border-top: 9px solid transparent; border-bottom: 9px solid transparent; margin-left: 4px; }
+  .ed-foot { position: absolute; bottom: 36px; left: 24px; right: 24px; display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.35); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; }
+
+  .vinyl {
+    background:
+      radial-gradient(500px 500px at 50% 50%, rgba(80,50,30,0.3), transparent 60%),
+      linear-gradient(180deg, #1a140e 0%, #0d0804 100%);
+  }
+  .v-top { position: absolute; top: 56px; left: 0; right: 0; text-align: center; }
+  .v-top .n { font-size: 11px; letter-spacing: 0.2em; color: rgba(255,200,150,0.6); font-weight: 500; text-transform: uppercase; }
+  .v-top .side { font-family: 'Instrument Serif', serif; font-size: 20px; margin-top: 4px; color: rgba(255,220,180,0.85); font-style: italic; }
+  .v-disc-wrap { position: absolute; left: 50%; top: 170px; transform: translateX(-50%); width: 280px; height: 280px; }
+  .v-disc {
+    position: absolute; inset: 0; border-radius: 50%;
+    background:
+      repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 4px),
+      radial-gradient(circle at 50% 50%, #1f1612 0%, #0a0604 100%);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.5), inset 0 0 50px rgba(0,0,0,0.5);
+    animation: spin 12s linear infinite;
+  }
+  .v-disc::after {
+    content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 110px; height: 110px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #d87a3a, #8c3a1a 70%, #4a1a0c 100%);
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+  }
+  .v-disc::before {
+    content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 10px; height: 10px; border-radius: 50%; background: #0a0604; z-index: 2;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .v-info { position: absolute; left: 0; right: 0; bottom: 140px; text-align: center; }
+  .v-info .t { font-family: 'Instrument Serif', serif; font-size: 30px; font-style: italic; color: rgba(255,230,200,0.95); letter-spacing: -0.02em; }
+  .v-info .a { font-size: 12px; color: rgba(255,200,150,0.55); margin-top: 6px; letter-spacing: 0.15em; text-transform: uppercase; }
+  .v-ctl { position: absolute; bottom: 60px; left: 0; right: 0; display: flex; justify-content: center; gap: 36px; }
+  .v-ctl div { font-family: 'Instrument Serif', serif; font-size: 26px; color: rgba(255,220,180,0.85); font-style: italic; cursor: pointer; }
+  .v-ctl .p { font-size: 32px; color: rgba(255,230,200,1); }
+
+  .brutal { background: #e8e5de; color: #0a0a0a; }
+  .br-top { position: absolute; top: 48px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .br-top .no { font-size: 12px; font-weight: 700; letter-spacing: -0.02em; }
+  .br-top .bars { display: flex; flex-direction: column; gap: 3px; }
+  .br-top .bars span { display: block; width: 24px; height: 2px; background: #0a0a0a; }
+  .br-art { position: absolute; top: 100px; left: 20px; right: 20px; height: 260px; background: #0a0a0a; overflow: hidden; }
+  .br-art::before {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(200px 150px at 70% 30%, #ff4b2b 0%, transparent 60%),
+      linear-gradient(135deg, #0a0a0a 0%, #2a0a05 100%);
+  }
+  .br-art::after {
+    content: ""; position: absolute; left: 50%; bottom: -40px; transform: translateX(-50%);
+    width: 180px; height: 180px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 30%, #1a0a05 10%, #0a0a0a 60%);
+  }
+  .br-meta { position: absolute; top: 380px; left: 20px; right: 20px; }
+  .br-meta .label { font-size: 10px; letter-spacing: 0.3em; font-weight: 700; color: #6a6560; }
+  .br-meta .t { font-family: 'Inter', sans-serif; font-size: 36px; font-weight: 900; letter-spacing: -0.04em; line-height: 0.95; margin-top: 8px; color: #0a0a0a; text-transform: uppercase; }
+  .br-meta .a { font-size: 13px; margin-top: 8px; font-weight: 500; letter-spacing: 0.02em; }
+  .br-meta .divider { height: 2px; background: #0a0a0a; margin: 20px 0 14px; }
+  .br-prog { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; }
+  .br-ctl { position: absolute; bottom: 50px; left: 20px; right: 20px; display: flex; align-items: center; justify-content: space-between; }
+  .br-ctl .side { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; }
+  .br-ctl .play { width: 64px; height: 64px; background: #ff4b2b; display: grid; place-items: center; }
+  .br-ctl .play::after { content: ""; width: 0; height: 0; border-left: 16px solid #fff; border-top: 10px solid transparent; border-bottom: 10px solid transparent; margin-left: 4px; }
+  .brutal .time, .brutal .ind { color: #0a0a0a; }
+  .brutal .ind svg rect, .brutal .ind svg path { fill: #0a0a0a !important; stroke: #0a0a0a !important; }
+  .brutal .home { background: rgba(10,10,10,0.3); }
+
+  .foot { max-width: 1600px; margin: 80px auto 0; display: flex; justify-content: space-between; align-items: center; padding-top: 32px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .foot .l { font-size: 13px; color: rgba(255,255,255,0.4); font-family: 'JetBrains Mono', monospace; }
+  .foot .r { font-size: 13px; color: rgba(255,255,255,0.4); }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1><em>Needle</em> &nbsp;·&nbsp; <i>four directions</i></h1>
+  <div class="prompt">pick a letter · reply A B C or D</div>
+</div>
+
+<div class="rack">
+
+  <div class="slot">
+    <div class="phone">
+      <div class="island"></div>
+      <div class="time">9:41</div>
+      <div class="ind">
+        <svg viewBox="0 0 16 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#fff"/><rect x="4" y="4" width="3" height="7" rx="1" fill="#fff"/><rect x="8" y="2" width="3" height="9" rx="1" fill="#fff"/><rect x="12" y="0" width="3" height="11" rx="1" fill="#fff"/></svg>
+        <svg viewBox="0 0 27 13"><rect x="1" y="1" width="22" height="11" rx="3" fill="none" stroke="#fff" stroke-width="1"/><rect x="3" y="3" width="18" height="7" rx="1.5" fill="#fff"/></svg>
+      </div>
+      <div class="screen immersive">
+        <div class="imm-top">
+          <div class="from">LISTENING TO</div>
+          <div class="ctx">Blonde · Frank Ocean</div>
+        </div>
+        <div class="imm-shoulders"></div>
+        <div class="imm-figure"></div>
+        <div class="imm-panel">
+          <div class="t">Nikes</div>
+          <div class="a">Frank Ocean · 5:14</div>
+          <div class="bar"></div>
+          <div class="row">
+            <div class="icn">⇆</div>
+            <div class="icn">◁◁</div>
+            <div class="play">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#2a1206"><path d="M8 5v14l11-7L8 5z"/></svg>
+            </div>
+            <div class="icn">▷▷</div>
+            <div class="icn">↻</div>
+          </div>
+        </div>
+      </div>
+      <div class="home"></div>
+    </div>
+    <div class="tag"><div class="letter">A</div><div class="name">Immersive</div></div>
+    <div class="desc">silhouette fills the screen, glass panel of controls floats at the bottom</div>
+  </div>
+
+  <div class="slot">
+    <div class="phone">
+      <div class="island"></div>
+      <div class="time">9:41</div>
+      <div class="ind">
+        <svg viewBox="0 0 16 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#fff"/><rect x="4" y="4" width="3" height="7" rx="1" fill="#fff"/><rect x="8" y="2" width="3" height="9" rx="1" fill="#fff"/><rect x="12" y="0" width="3" height="11" rx="1" fill="#fff"/></svg>
+        <svg viewBox="0 0 27 13"><rect x="1" y="1" width="22" height="11" rx="3" fill="none" stroke="#fff" stroke-width="1"/><rect x="3" y="3" width="18" height="7" rx="1.5" fill="#fff"/></svg>
+      </div>
+      <div class="screen editorial">
+        <div class="ed-top">
+          <div class="meta">NOW PLAYING · TRACK 03</div>
+          <div class="title">Nikes</div>
+          <div class="artist">Frank Ocean, Blonde</div>
+        </div>
+        <div class="ed-chip"></div>
+        <div class="ed-divider"></div>
+        <div class="ed-nums">
+          <div class="cur">1:58</div>
+          <div class="of">of 5:14</div>
+        </div>
+        <div class="ed-bar"></div>
+        <div class="ed-ctl">
+          <div class="arrows">
+            <div class="a">←</div>
+            <div class="a">→</div>
+          </div>
+          <div class="play"></div>
+          <div class="lab">SHUFFLE</div>
+        </div>
+        <div class="ed-foot"><span>SIDE A</span><span>320 KBPS</span></div>
+      </div>
+      <div class="home"></div>
+    </div>
+    <div class="tag"><div class="letter">B</div><div class="name">Editorial</div></div>
+    <div class="desc">magazine typography, art shrunk to a corner chip, generous negative space</div>
+  </div>
+
+  <div class="slot">
+    <div class="phone">
+      <div class="island"></div>
+      <div class="time">9:41</div>
+      <div class="ind">
+        <svg viewBox="0 0 16 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#fff"/><rect x="4" y="4" width="3" height="7" rx="1" fill="#fff"/><rect x="8" y="2" width="3" height="9" rx="1" fill="#fff"/><rect x="12" y="0" width="3" height="11" rx="1" fill="#fff"/></svg>
+        <svg viewBox="0 0 27 13"><rect x="1" y="1" width="22" height="11" rx="3" fill="none" stroke="#fff" stroke-width="1"/><rect x="3" y="3" width="18" height="7" rx="1.5" fill="#fff"/></svg>
+      </div>
+      <div class="screen vinyl">
+        <div class="v-top">
+          <div class="n">Side A</div>
+          <div class="side">Blonde</div>
+        </div>
+        <div class="v-disc-wrap">
+          <div class="v-disc"></div>
+        </div>
+        <div class="v-info">
+          <div class="t">Nikes</div>
+          <div class="a">Frank Ocean</div>
+        </div>
+        <div class="v-ctl">
+          <div>◁</div>
+          <div class="p">▶</div>
+          <div>▷</div>
+        </div>
+      </div>
+      <div class="home"></div>
+    </div>
+    <div class="tag"><div class="letter">C</div><div class="name">Vinyl</div></div>
+    <div class="desc">spinning record, warm amber palette, serif italics, record-store vibe</div>
+  </div>
+
+  <div class="slot">
+    <div class="phone">
+      <div class="island"></div>
+      <div class="time">9:41</div>
+      <div class="ind">
+        <svg viewBox="0 0 16 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#0a0a0a"/><rect x="4" y="4" width="3" height="7" rx="1" fill="#0a0a0a"/><rect x="8" y="2" width="3" height="9" rx="1" fill="#0a0a0a"/><rect x="12" y="0" width="3" height="11" rx="1" fill="#0a0a0a"/></svg>
+        <svg viewBox="0 0 27 13"><rect x="1" y="1" width="22" height="11" rx="3" fill="none" stroke="#0a0a0a" stroke-width="1"/><rect x="3" y="3" width="18" height="7" rx="1.5" fill="#0a0a0a"/></svg>
+      </div>
+      <div class="screen brutal">
+        <div class="br-top">
+          <div class="no">NEEDLE / 01</div>
+          <div class="bars"><span></span><span></span><span></span></div>
+        </div>
+        <div class="br-art"></div>
+        <div class="br-meta">
+          <div class="label">TRACK</div>
+          <div class="t">NIKES</div>
+          <div class="a">Frank Ocean / Blonde</div>
+          <div class="divider"></div>
+          <div class="br-prog"><span>01:58</span><span>— 03:16</span></div>
+        </div>
+        <div class="br-ctl">
+          <div class="side">PREV</div>
+          <div class="play"></div>
+          <div class="side">NEXT</div>
+        </div>
+      </div>
+      <div class="home"></div>
+    </div>
+    <div class="tag"><div class="letter">D</div><div class="name">Brutal</div></div>
+    <div class="desc">off-white paper, heavy black type, red accent, print-poster feel</div>
+  </div>
+
+</div>
+
+<div class="foot">
+  <div class="l">needle.directions.html · v0.2</div>
+  <div class="r">by Renzo · @renzoo7646</div>
+</div>
+
+</body>
+</html>

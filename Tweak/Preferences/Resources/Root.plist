@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>title</key>
+    <string>Needle</string>
+    <key>items</key>
+    <array>
+
+        <dict>
+            <key>cell</key>
+            <string>PSGroupCell</string>
+            <key>label</key>
+            <string>Premium flags</string>
+            <key>footerText</key>
+            <string>Hooks the entitlement predicates Spotify checks before enabling paid features.</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>default</key>
+            <true/>
+            <key>defaults</key>
+            <string>com.renn.needle</string>
+            <key>key</key>
+            <string>PremiumOn</string>
+            <key>label</key>
+            <string>Premium flags on</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>default</key>
+            <true/>
+            <key>defaults</key>
+            <string>com.renn.needle</string>
+            <key>key</key>
+            <string>AdsBlocked</string>
+            <key>label</key>
+            <string>Block ads</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>default</key>
+            <true/>
+            <key>defaults</key>
+            <string>com.renn.needle</string>
+            <key>key</key>
+            <string>TelemetryBlocked</string>
+            <key>label</key>
+            <string>Block telemetry</string>
+        </dict>
+
+        <dict>
+            <key>cell</key>
+            <string>PSGroupCell</string>
+            <key>label</key>
+            <string>Playback</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>default</key>
+            <true/>
+            <key>defaults</key>
+            <string>com.renn.needle</string>
+            <key>key</key>
+            <string>RealShuffle</string>
+            <key>label</key>
+            <string>Fisher Yates shuffle</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>default</key>
+            <false/>
+            <key>defaults</key>
+            <string>com.renn.needle</string>
+            <key>key</key>
+            <string>CanvasOff</string>
+            <key>label</key>
+            <string>Disable Canvas video</string>
+        </dict>
+
+        <dict>
+            <key>cell</key>
+            <string>PSGroupCell</string>
+            <key>label</key>
+            <string>Look</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>default</key>
+            <true/>
+            <key>defaults</key>
+            <string>com.renn.needle</string>
+            <key>key</key>
+            <string>AlbumColorUI</string>
+            <key>label</key>
+            <string>Album colored Now Playing</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>default</key>
+            <true/>
+            <key>defaults</key>
+            <string>com.renn.needle</string>
+            <key>key</key>
+            <string>BigLockscreenArt</string>
+            <key>label</key>
+            <string>Apple Music lockscreen art</string>
+        </dict>
+
+        <dict>
+            <key>cell</key>
+            <string>PSGroupCell</string>
+            <key>label</key>
+            <string>Last.fm scrobble</string>
+            <key>footerText</key>
+            <string>Create a Last.fm API account at last.fm/api/account/create, paste the key and shared secret, then tap Get session key and sign in.</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>default</key>
+            <false/>
+            <key>defaults</key>
+            <string>com.renn.needle</string>
+            <key>key</key>
+            <string>ScrobbleOn</string>
+            <key>label</key>
+            <string>Scrobble plays</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSEditTextCell</string>
+            <key>defaults</key>
+            <string>com.renn.needle</string>
+            <key>key</key>
+            <string>LastFmApiKey</string>
+            <key>label</key>
+            <string>API key</string>
+            <key>placeholder</key>
+            <string>paste here</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSEditTextCell</string>
+            <key>defaults</key>
+            <string>com.renn.needle</string>
+            <key>key</key>
+            <string>LastFmSecret</string>
+            <key>label</key>
+            <string>Shared secret</string>
+            <key>placeholder</key>
+            <string>paste here</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSEditTextCell</string>
+            <key>defaults</key>
+            <string>com.renn.needle</string>
+            <key>key</key>
+            <string>LastFmSession</string>
+            <key>label</key>
+            <string>Session key</string>
+            <key>placeholder</key>
+            <string>paste from Last.fm auth</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSButtonCell</string>
+            <key>label</key>
+            <string>Open Last.fm sign in</string>
+            <key>action</key>
+            <string>openLastFmAuth:</string>
+        </dict>
+
+        <dict>
+            <key>cell</key>
+            <string>PSGroupCell</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSButtonCell</string>
+            <key>label</key>
+            <string>Respring</string>
+            <key>action</key>
+            <string>respring:</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSButtonCell</string>
+            <key>label</key>
+            <string>Needle on Discord</string>
+            <key>action</key>
+            <string>openSupport:</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSGroupCell</string>
+            <key>footerText</key>
+            <string>Needle v1.0 by Renzo. Discord @renzoo7646.</string>
+        </dict>
+
+    </array>
+</dict>
+</plist>
