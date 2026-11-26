@@ -1,6 +1,5 @@
 #import <UIKit/UIKit.h>
 #import <AVFoundation/AVFoundation.h>
-#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 extern UIColor *NeedleCurrentColor(void);
 
@@ -81,20 +80,10 @@ extern UIColor *NeedleCurrentColor(void);
 }
 
 - (void)pickFile {
-    NSArray *types = @[];
-    if (@available(iOS 14.0, *)) {
-        UTType *audio = [UTType typeWithIdentifier:@"public.audio"];
-        types = @[audio];
-        UIDocumentPickerViewController *dp = [[UIDocumentPickerViewController alloc]
-            initForOpeningContentTypes:types asCopy:YES];
-        dp.delegate = self;
-        [self presentViewController:dp animated:YES completion:nil];
-    } else {
-        UIDocumentPickerViewController *dp = [[UIDocumentPickerViewController alloc]
-            initWithDocumentTypes:@[@"public.audio"] inMode:UIDocumentPickerModeImport];
-        dp.delegate = self;
-        [self presentViewController:dp animated:YES completion:nil];
-    }
+    UIDocumentPickerViewController *dp = [[UIDocumentPickerViewController alloc]
+        initWithDocumentTypes:@[@"public.audio"] inMode:UIDocumentPickerModeImport];
+    dp.delegate = self;
+    [self presentViewController:dp animated:YES completion:nil];
 }
 
 - (void)documentPicker:(UIDocumentPickerViewController *)c didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
