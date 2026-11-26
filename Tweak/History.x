@@ -75,7 +75,7 @@ void NeedleClearHistory(void) {
 }
 %end
 
-static __weak id _needleSeekPlayer = nil;
+__weak id _needleSeekPlayer = nil;
 
 extern void NeedleOnPositionChanged(id player, NSTimeInterval pos);
 
