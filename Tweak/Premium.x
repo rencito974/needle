@@ -40,6 +40,21 @@ static NSDictionary *_NeedlePremiumOverrides(void) {
     return d;
 }
 
+@interface SPTCoreProductState : NSObject
+@end
+@interface SPTProductState : NSObject
+@end
+@interface SPTNowPlayingProductState : NSObject
+@end
+@interface SPTPlayerRestrictions : NSObject
+@end
+@interface SPTPlayerSuppressions : NSObject
+@end
+@interface SPTAdsActionHandler : NSObject
+@end
+@interface SPTAccountProductInformationController : NSObject
+@end
+
 %hook SPTCoreProductState
 - (NSString *)productStateValueForKey:(NSString *)key {
     if (!NeedlePrefBool(@"PremiumOn", YES)) return %orig;

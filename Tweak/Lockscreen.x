@@ -50,6 +50,9 @@ static NSDictionary *NeedleEnrichNowPlaying(NSDictionary *info) {
     return [mut copy];
 }
 
+@interface SPTNowPlayingInfoCenterArtworkDecorator : NSObject
+@end
+
 %hook MPNowPlayingInfoCenter
 - (void)setNowPlayingInfo:(NSDictionary *)info {
     if (!NeedlePrefBool(@"BigLockscreenArt", YES)) { %orig; return; }

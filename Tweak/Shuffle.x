@@ -13,6 +13,15 @@ static NSArray *NeedleFisherYates(NSArray *input) {
     return [a copy];
 }
 
+@interface SPTPlayerContext : NSObject
+@end
+@interface SPTPlayerQueueImplementation : NSObject
+@end
+@interface SPTPlayerQueueWrapperImpl : NSObject
+@end
+@interface SPTContextualShuffle_ShuffleToggleModelImpl : NSObject
+@end
+
 %hook SPTPlayerContext
 - (NSArray *)tracks {
     NSArray *orig = %orig;

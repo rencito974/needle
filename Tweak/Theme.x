@@ -7,6 +7,19 @@ extern UIColor *NeedleCurrentColor(void);
 extern UIColor *NeedleContrastColor(void);
 extern BOOL NeedlePrefBool(NSString *key, BOOL def);
 
+@interface SPTNowPlayingContainedViewController : UIViewController
+@end
+@interface SPTNowPlayingContainingViewController : UIViewController
+@end
+@interface SPTNowPlayingViewContainerViewController : UIViewController
+@end
+@interface SPTNowPlayingBackgroundViewModel : NSObject
+@end
+@interface SPTNowPlayingContentCoverArtCell : UIView
+@end
+@interface SPTTabBarContainer : UIViewController
+@end
+
 @interface _NeedleGradientView : UIView
 @end
 

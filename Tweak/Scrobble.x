@@ -127,6 +127,13 @@ static void NeedleTrackTick(NSTimeInterval elapsed) {
     NeedleScrobble(_curArtist, _curTrack, _curAlbum, _curStart);
 }
 
+@interface SPTPlayer : NSObject
+@end
+@interface SPTPlayerState : NSObject
+@end
+@interface SPTPlayerPositionStateImplementation : NSObject
+@end
+
 %hook SPTPlayer
 - (void)setCurrentTrack:(id)track {
     %orig;
