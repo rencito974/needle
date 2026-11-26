@@ -1,6 +1,10 @@
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
 #import <UIKit/UIKit.h>
+#import <spawn.h>
+#import <sys/wait.h>
+
+extern char **environ;
 
 @interface NeedlePrefsListController : PSListController
 @end
@@ -42,12 +46,9 @@
 }
 
 - (void)respring:(PSSpecifier *)spec {
-    NSTask *task = [[NSClassFromString(@"NSTask") alloc] init];
-    if (task) {
-        [task setValue:@"/usr/bin/killall" forKey:@"launchPath"];
-        [task setValue:@[@"-9", @"SpringBoard"] forKey:@"arguments"];
-        [task performSelector:@selector(launch)];
-    }
+    pid_t pid;
+    const char *argv[] = {"killall", "-9", "SpringBoard", NULL};
+    posix_spawn(&pid, "/usr/bin/killall", NULL, NULL, (char *const *)argv, environ);
 }
 
 @end
