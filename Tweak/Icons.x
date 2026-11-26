@@ -83,17 +83,37 @@ extern UIColor *NeedleCurrentColor(void);
     tile.layer.shadowRadius = 14;
     tile.layer.shadowOpacity = 0.5;
 
-    UIImageView *wave = [[UIImageView alloc] initWithImage:
-        [UIImage systemImageNamed:@"waveform" withConfiguration:
-            [UIImageSymbolConfiguration configurationWithPointSize:cellW * 0.42 weight:UIImageSymbolWeightBold]]];
     UIColor *tileColor = icon[@"color"];
-    CGFloat r, g, b;
-    [tileColor getRed:&r green:&g blue:&b alpha:NULL];
-    BOOL dark = (r + g + b) < 1.5;
-    wave.tintColor = dark ? [UIColor whiteColor] : [UIColor blackColor];
-    wave.contentMode = UIViewContentModeCenter;
-    wave.frame = tile.bounds;
-    [tile addSubview:wave];
+    CGFloat rr, gg, bb;
+    [tileColor getRed:&rr green:&gg blue:&bb alpha:NULL];
+    BOOL dark = (rr + gg + bb) < 1.5;
+    UIColor *mark = dark ? [UIColor whiteColor] : [UIColor blackColor];
+
+    CGFloat cx = cellW / 2;
+    CGFloat cy = cellW / 2;
+    CGFloat lineW = cellW * 0.075;
+
+    for (NSInteger i = 0; i < 3; i++) {
+        CGFloat radius = cellW * (0.17 + i * 0.09);
+        CAShapeLayer *arc = [CAShapeLayer layer];
+        UIBezierPath *p = [UIBezierPath bezierPathWithArcCenter:CGPointMake(cx, cy + radius * 0.3)
+            radius:radius
+            startAngle:-M_PI * 0.85
+            endAngle:-M_PI * 0.15
+            clockwise:YES];
+        arc.path = p.CGPath;
+        arc.strokeColor = mark.CGColor;
+        arc.fillColor = [UIColor clearColor].CGColor;
+        arc.lineWidth = lineW;
+        arc.lineCap = kCALineCapRound;
+        [tile.layer addSublayer:arc];
+    }
+    CAShapeLayer *dot = [CAShapeLayer layer];
+    UIBezierPath *d = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(cx - lineW * 0.75, cy + cellW * 0.12, lineW * 1.5, lineW * 1.5)];
+    dot.path = d.CGPath;
+    dot.fillColor = mark.CGColor;
+    [tile.layer addSublayer:dot];
+
     [cell.contentView addSubview:tile];
 
     UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(0, cellW + 8, cellW, 20)];

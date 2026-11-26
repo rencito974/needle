@@ -126,36 +126,6 @@ static void _NeedleStartBreathing(UIView *view) {
 }
 %end
 
-%hook SPTNowPlayingBar
-- (void)didMoveToSuperview {
-    %orig;
-    if (!NeedlePrefBool(@"AlbumColorUI", YES)) return;
-    if (!self.superview) return;
-    _NeedleGradientView *bg = objc_getAssociatedObject(self, "_needleMiniBg");
-    if (!bg) {
-        bg = [[_NeedleGradientView alloc] initWithFrame:self.bounds];
-        bg.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        bg.layer.cornerRadius = 12;
-        bg.layer.masksToBounds = YES;
-        bg.alpha = 0.9;
-        [self insertSubview:bg atIndex:0];
-        objc_setAssociatedObject(self, "_needleMiniBg", bg, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        __weak _NeedleGradientView *weakBg = bg;
-        [[NSNotificationCenter defaultCenter] addObserverForName:@"NeedlePaletteChanged"
-            object:nil
-            queue:[NSOperationQueue mainQueue]
-            usingBlock:^(NSNotification *n) {
-                _NeedleGradientView *strong = weakBg;
-                if (!strong) return;
-                UIColor *c = [n.object isKindOfClass:[UIColor class]] ? (UIColor *)n.object : nil;
-                [UIView animateWithDuration:0.6 animations:^{
-                    [strong apply:c];
-                }];
-            }];
-    }
-    [bg apply:NeedleCurrentColor()];
-}
-%end
 
 %hook SPTTabBarContainer
 - (void)viewDidLoad {

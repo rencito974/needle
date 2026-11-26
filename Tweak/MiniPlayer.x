@@ -16,38 +16,14 @@ static char _kNeedleMiniProgress;
     if (!NeedlePrefBool(@"MiniPlayerRedesign", YES)) return;
     if (!self.superview) return;
 
-    UIView *artwork = nil;
-    for (UIView *sub in self.subviews) {
-        NSString *cls = NSStringFromClass([sub class]);
-        if ([cls containsString:@"Image"] || [cls containsString:@"Cover"] || [cls containsString:@"Artwork"]) {
-            artwork = sub;
-            break;
-        }
-    }
-    if (artwork) {
-        CGRect f = artwork.frame;
-        CGFloat target = MIN(self.bounds.size.height - 10, 56);
-        if (ABS(f.size.height - target) > 1) {
-            f.size.height = target;
-            f.size.width = target;
-            f.origin.y = (self.bounds.size.height - target) / 2;
-            f.origin.x = MAX(f.origin.x, 10);
-            artwork.frame = f;
-        }
-        artwork.layer.cornerRadius = 10;
-        artwork.layer.masksToBounds = YES;
-        artwork.layer.shadowColor = [UIColor blackColor].CGColor;
-        artwork.layer.shadowOffset = CGSizeMake(0, 2);
-        artwork.layer.shadowRadius = 6;
-        artwork.layer.shadowOpacity = 0.4;
-    }
-
     UIView *progress = objc_getAssociatedObject(self, &_kNeedleMiniProgress);
     if (!progress) {
-        progress = [[UIView alloc] initWithFrame:CGRectMake(0, self.bounds.size.height - 2, 0, 2)];
+        CGFloat h = 2;
+        progress = [[UIView alloc] initWithFrame:CGRectMake(0, self.bounds.size.height - h, 0, h)];
         progress.backgroundColor = NeedleCurrentColor();
         progress.autoresizingMask = UIViewAutoresizingFlexibleTopMargin;
         progress.layer.cornerRadius = 1;
+        progress.userInteractionEnabled = NO;
         [self addSubview:progress];
         objc_setAssociatedObject(self, &_kNeedleMiniProgress, progress, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
@@ -56,6 +32,10 @@ static char _kNeedleMiniProgress;
             p.backgroundColor = NeedleCurrentColor();
         }];
     }
+    CGRect pf = progress.frame;
+    pf.origin.y = self.bounds.size.height - pf.size.height;
+    progress.frame = pf;
+    [self bringSubviewToFront:progress];
 }
 
 %end

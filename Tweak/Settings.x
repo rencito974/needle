@@ -170,8 +170,8 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 
 - (void)viewWillDisappear:(BOOL)animated {
     [super viewWillDisappear:animated];
-    extern void NeedleShowFloatingButton(void);
-    NeedleShowFloatingButton();
+    extern void _NeedleSyncGearVisibility(void);
+    _NeedleSyncGearVisibility();
 }
 
 - (void)viewDidLayoutSubviews {
@@ -558,7 +558,8 @@ static void _NeedleAttachLongPress(UIView *view) {
 %end
 
 static UIView *_needleFloatingHost = nil;
-static BOOL _needleFloatingHidden = NO;
+static BOOL _needleFloatingHidden = YES;
+static BOOL _needleProfileOnScreen = NO;
 
 void NeedleHideFloatingButton(void) {
     _needleFloatingHidden = YES;
@@ -568,6 +569,11 @@ void NeedleHideFloatingButton(void) {
 void NeedleShowFloatingButton(void) {
     _needleFloatingHidden = NO;
     if (_needleFloatingHost) _needleFloatingHost.hidden = NO;
+}
+
+void _NeedleSyncGearVisibility(void) {
+    if (!_needleFloatingHost) return;
+    _needleFloatingHost.hidden = !_needleProfileOnScreen;
 }
 
 static UIView *_NeedleBuildButton(CGRect frame) {
@@ -644,7 +650,7 @@ static void NeedleInstallFloatingButton(void) {
     CGFloat btnSize = 42;
     CGRect frame = CGRectMake(target.bounds.size.width - btnSize - 16, 68, btnSize, btnSize);
     _needleFloatingHost = _NeedleBuildButton(frame);
-    _needleFloatingHost.hidden = _needleFloatingHidden;
+    _needleFloatingHost.hidden = !_needleProfileOnScreen;
     [target addSubview:_needleFloatingHost];
     [target bringSubviewToFront:_needleFloatingHost];
 
@@ -678,12 +684,32 @@ static void NeedleStartInstallWatchdog(void) {
     }];
 }
 
+static BOOL _NeedleIsProfileVCClass(Class c) {
+    NSString *name = NSStringFromClass(c);
+    if (!name.length) return NO;
+    if ([name containsString:@"Profile"]) return YES;
+    if ([name containsString:@"YourLibrary"] && [name containsString:@"Account"]) return YES;
+    if ([name hasPrefix:@"SPTAccount"]) return YES;
+    return NO;
+}
+
 %hook UIViewController
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    if (_NeedleIsProfileVCClass([self class])) {
+        _needleProfileOnScreen = YES;
+    }
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NeedleInstallFloatingButton();
+        _NeedleSyncGearVisibility();
     });
+}
+- (void)viewWillDisappear:(BOOL)animated {
+    %orig;
+    if (_NeedleIsProfileVCClass([self class])) {
+        _needleProfileOnScreen = NO;
+        _NeedleSyncGearVisibility();
+    }
 }
 %end
 

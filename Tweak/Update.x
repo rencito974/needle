@@ -4,10 +4,17 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.0.0";
-static NSString *const NeedleChangelogURL = @"https://raw.githubusercontent.com/rencito974/needle/main/CHANGELOG.txt";
+static NSString *const NeedleCurrentVersion = @"2.1.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
+
+static NSString *NeedleBundledChangelog(void) {
+    return @"Spotify-shaped app icons (three soundwave arcs, six colours).\n"
+           "Cleaner mini player (no more muddy tint).\n"
+           "Changelog opens instantly (no server needed).\n"
+           "Floating gear hides by default and only shows when you open your profile.\n"
+           "Stability and layout fixes.";
+}
 
 static UIViewController *_NeedleTopVisibleVC(void) {
     UIWindow *win = nil;
@@ -126,52 +133,28 @@ static UIViewController *_NeedleTopVisibleVC(void) {
 - (void)dismissSelf { [self dismissViewControllerAnimated:YES completion:nil]; }
 @end
 
-static NSString *NeedleExtractLatestSection(NSString *full) {
-    NSArray *lines = [full componentsSeparatedByString:@"\n"];
-    NSMutableString *out = [NSMutableString new];
-    BOOL inFirst = NO;
-    for (NSString *l in lines) {
-        NSString *stripped = [l stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-        if ([stripped rangeOfString:@"." options:0].location != NSNotFound &&
-            [stripped rangeOfString:@" " options:0].location == NSNotFound &&
-            [stripped length] < 12) {
-            if (inFirst) break;
-            inFirst = YES;
-            continue;
-        }
-        if (inFirst && stripped.length) [out appendFormat:@"%@\n", stripped];
-    }
-    return out;
+static void NeedleShowChangelogSheet(void) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIViewController *top = _NeedleTopVisibleVC();
+        if (!top) return;
+        NeedleChangelogSheet *sheet = [NeedleChangelogSheet new];
+        sheet.version = NeedleCurrentVersion;
+        sheet.body = NeedleBundledChangelog();
+        sheet.modalPresentationStyle = UIModalPresentationFullScreen;
+        [top presentViewController:sheet animated:YES completion:^{
+            NeedlePrefSetString(@"ChangelogSeenVersion", NeedleCurrentVersion);
+        }];
+    });
 }
 
 static void NeedleFetchAndShowChangelog(BOOL force) {
     NSString *lastSeen = NeedlePrefString(@"ChangelogSeenVersion");
     if (!force && [lastSeen isEqualToString:NeedleCurrentVersion]) return;
-
-    NSURL *url = [NSURL URLWithString:NeedleChangelogURL];
-    NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithURL:url
-        completionHandler:^(NSData *data, NSURLResponse *r, NSError *err) {
-            if (!data) return;
-            NSString *full = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-            NSString *section = NeedleExtractLatestSection(full);
-            if (!section.length) return;
-            dispatch_async(dispatch_get_main_queue(), ^{
-                UIViewController *top = _NeedleTopVisibleVC();
-                if (!top) return;
-                NeedleChangelogSheet *sheet = [NeedleChangelogSheet new];
-                sheet.version = NeedleCurrentVersion;
-                sheet.body = section;
-                sheet.modalPresentationStyle = UIModalPresentationFullScreen;
-                [top presentViewController:sheet animated:YES completion:^{
-                    NeedlePrefSetString(@"ChangelogSeenVersion", NeedleCurrentVersion);
-                }];
-            });
-        }];
-    [task resume];
+    NeedleShowChangelogSheet();
 }
 
 void NeedleShowChangelogNow(void) {
-    NeedleFetchAndShowChangelog(YES);
+    NeedleShowChangelogSheet();
 }
 
 static void NeedleCheckForNewerBuild(void) {
