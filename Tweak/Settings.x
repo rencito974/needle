@@ -96,7 +96,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.17";
+    return @"2.18";
 }
 
 @implementation NeedleSettingsViewController
@@ -785,11 +785,15 @@ static NSString *_NeedleVersionTag(void) {
     CGPoint t = [g translationInView:host.superview];
     host.center = CGPointMake(host.center.x + t.x, host.center.y + t.y);
     [g setTranslation:CGPointZero inView:host.superview];
+    extern void _NeedleReflowFloatsIfNeeded(void);
+    _NeedleReflowFloatsIfNeeded();
     if (g.state == UIGestureRecognizerStateEnded) {
         CGRect bounds = host.superview.bounds;
-        CGFloat x = host.center.x < bounds.size.width / 2 ? host.frame.size.width / 2 + 12 : bounds.size.width - host.frame.size.width / 2 - 12;
+        CGFloat edge = host.frame.size.width;
+        CGFloat x = host.center.x < bounds.size.width / 2 ? edge / 2 + 12 + edge * 2 + 20 : bounds.size.width - edge / 2 - 12;
         [UIView animateWithDuration:0.25 animations:^{
             host.center = CGPointMake(x, host.center.y);
+            _NeedleReflowFloatsIfNeeded();
         }];
     }
 }
@@ -1094,6 +1098,34 @@ void NeedleInstallFloatingRating(void) {
     [target bringSubviewToFront:_needleFloatingRating];
 }
 
+void _NeedleReflowFloatsImpl(UIWindow *w) {
+    if (!_needleFloatingHost || _needleFloatingHost.superview != w) return;
+    CGPoint gearCenter = _needleFloatingHost.center;
+    CGFloat btnSize = _needleFloatingHost.frame.size.width;
+    CGFloat gap = 10;
+    BOOL leftSide = gearCenter.x < w.bounds.size.width / 2.0;
+    CGFloat direction = leftSide ? 1.0 : -1.0;
+    if (_needleFloatingQR && _needleFloatingQR.superview == w) {
+        CGFloat x = gearCenter.x + direction * (btnSize + gap);
+        _needleFloatingQR.center = CGPointMake(x, gearCenter.y);
+    }
+    if (_needleFloatingRating && _needleFloatingRating.superview == w) {
+        CGFloat x = gearCenter.x + direction * (btnSize + gap) * 2.0;
+        _needleFloatingRating.center = CGPointMake(x, gearCenter.y);
+    }
+}
+
+void _NeedleReflowFloatsIfNeeded(void) {
+    if (!_needleFloatingHost) return;
+    UIWindow *w = (UIWindow *)_needleFloatingHost.superview;
+    if (![w isKindOfClass:[UIWindow class]]) return;
+    _NeedleReflowFloatsImpl(w);
+}
+
+static void _NeedleReflowFloats(UIWindow *w) {
+    _NeedleReflowFloatsImpl(w);
+}
+
 %hook UIWindow
 - (void)layoutSubviews {
     %orig;
@@ -1113,6 +1145,7 @@ void NeedleInstallFloatingRating(void) {
         } else {
             [self bringSubviewToFront:_needleFloatingRating];
         }
+        _NeedleReflowFloats(self);
     }
 }
 %end

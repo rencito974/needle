@@ -4,14 +4,14 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.17.0";
+static NSString *const NeedleCurrentVersion = @"2.18.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Gear button no longer gets stuck hidden after you close Settings; it reinstalls and shows itself again.\n"
-           "Third floating button added: star icon next to the QR circle, shows whenever a track is cached, one tap opens the Rating pad for the current song.\n"
-           "All three floating buttons (gear, QR, rating) now get aggressively reinstalled after Settings dismisses so they stay reachable from anywhere in Spotify.";
+    return @"Track cache now falls back to MPNowPlayingInfo if Spotify's own setCurrentTrack hook missed the song (so QR + rating circles show up even when the song started before Needle loaded).\n"
+           "QR and Rating circles now follow the gear if you drag it across the screen, snapping to the same side.\n"
+           "Pan edge snap fixed: three circles always stay on screen together, not off the side.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
