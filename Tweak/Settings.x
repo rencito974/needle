@@ -103,32 +103,75 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     [super viewDidLoad];
     [self buildModel];
 
-    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 88)];
+    CGFloat w = self.view.bounds.size.width;
+    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, 140)];
     header.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(20, 44, 200, 36)];
-    title.text = @"Needle";
-    title.textColor = [UIColor whiteColor];
-    title.font = [UIFont systemFontOfSize:28 weight:UIFontWeightBold];
-    [header addSubview:title];
+
     UIButton *close = [UIButton buttonWithType:UIButtonTypeSystem];
-    close.frame = CGRectMake(self.view.bounds.size.width - 60, 48, 40, 28);
+    close.frame = CGRectMake(w - 60, 58, 40, 32);
     close.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
-    [close setTitle:@"Done" forState:UIControlStateNormal];
-    [close setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    close.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
+    [close setImage:[UIImage systemImageNamed:@"xmark.circle.fill"
+        withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:28 weight:UIImageSymbolWeightSemibold]] forState:UIControlStateNormal];
+    close.tintColor = [UIColor colorWithWhite:1.0 alpha:0.6];
     [close addTarget:self action:@selector(dismissSelf) forControlEvents:UIControlEventTouchUpInside];
     [header addSubview:close];
+
+    UIView *logo = [[UIView alloc] initWithFrame:CGRectMake(20, 60, 44, 44)];
+    logo.backgroundColor = NeedleCurrentColor();
+    logo.layer.cornerRadius = 12;
+    logo.layer.shadowColor = NeedleCurrentColor().CGColor;
+    logo.layer.shadowOffset = CGSizeMake(0, 4);
+    logo.layer.shadowRadius = 12;
+    logo.layer.shadowOpacity = 0.6;
+    UIImageView *logoIcon = [[UIImageView alloc] initWithImage:
+        [UIImage systemImageNamed:@"waveform" withConfiguration:
+            [UIImageSymbolConfiguration configurationWithPointSize:22 weight:UIImageSymbolWeightBold]]];
+    logoIcon.tintColor = [UIColor whiteColor];
+    logoIcon.contentMode = UIViewContentModeCenter;
+    logoIcon.frame = logo.bounds;
+    [logo addSubview:logoIcon];
+    [header addSubview:logo];
+
+    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(76, 60, w - 140, 24)];
+    title.text = @"Needle";
+    title.textColor = [UIColor whiteColor];
+    title.font = [UIFont systemFontOfSize:22 weight:UIFontWeightBold];
+    title.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [header addSubview:title];
+
+    UILabel *sub = [[UILabel alloc] initWithFrame:CGRectMake(76, 84, w - 140, 18)];
+    sub.text = @"Spotify, reshaped.";
+    sub.textColor = [UIColor colorWithWhite:1.0 alpha:0.55];
+    sub.font = [UIFont systemFontOfSize:13 weight:UIFontWeightRegular];
+    sub.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [header addSubview:sub];
+
     [self.view addSubview:header];
 
     self.table = [[UITableView alloc] initWithFrame:
-        CGRectMake(0, 88, self.view.bounds.size.width, self.view.bounds.size.height - 88)
+        CGRectMake(0, 140, w, self.view.bounds.size.height - 140)
         style:UITableViewStyleInsetGrouped];
     self.table.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.table.backgroundColor = [UIColor clearColor];
-    self.table.separatorColor = [UIColor colorWithWhite:1.0 alpha:0.1];
+    self.table.separatorColor = [UIColor colorWithWhite:1.0 alpha:0.08];
+    self.table.separatorInset = UIEdgeInsetsMake(0, 68, 0, 0);
+    self.table.rowHeight = 60;
+    self.table.sectionHeaderTopPadding = 4;
     self.table.dataSource = self;
     self.table.delegate = self;
     [self.view addSubview:self.table];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    extern void NeedleHideFloatingButton(void);
+    NeedleHideFloatingButton();
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    [super viewWillDisappear:animated];
+    extern void NeedleShowFloatingButton(void);
+    NeedleShowFloatingButton();
 }
 
 - (void)viewDidLayoutSubviews {
@@ -209,11 +252,11 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     NeedleSection *about = [NeedleSection new];
     about.title = @"About";
     about.rows = @[
-        [NeedleRow button:@"Needle on Discord" action:^{
+        [NeedleRow button:@"Join the Discord" action:^{
             [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://discord.gg/4Fk34R76tt"] options:@{} completionHandler:nil];
-        } symbol:@"bubble.left.and.bubble.right"],
+        } symbol:@"bubble.left.and.bubble.right.fill"],
     ];
-    about.footer = @"Needle v1.1 by Renzo. Discord @renzoo7646.";
+    about.footer = @"Needle v1.1";
 
     self.sections = @[playback, sleep, look, scrobble, about];
 }
@@ -232,32 +275,54 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 - (UITableViewCell *)tableView:(UITableView *)t cellForRowAtIndexPath:(NSIndexPath *)ip {
     NeedleRow *row = self.sections[ip.section].rows[ip.row];
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-    cell.backgroundColor = [UIColor colorWithWhite:0.08 alpha:0.75];
-    cell.textLabel.textColor = [UIColor whiteColor];
-    cell.textLabel.text = row.label;
-    cell.textLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
-    cell.imageView.tintColor = NeedleCurrentColor();
-    if (row.symbol) {
-        UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:17 weight:UIImageSymbolWeightSemibold];
-        UIImage *icon = [UIImage systemImageNamed:row.symbol withConfiguration:cfg];
-        cell.imageView.image = icon;
+    cell.backgroundColor = [UIColor colorWithWhite:0.10 alpha:0.9];
+    cell.textLabel.hidden = YES;
+    cell.imageView.hidden = YES;
+    for (UIView *sub in [cell.contentView.subviews copy]) {
+        if (sub.tag == 9911 || sub.tag == 9912) [sub removeFromSuperview];
     }
+
+    UIView *iconBox = [[UIView alloc] initWithFrame:CGRectMake(16, 14, 32, 32)];
+    iconBox.tag = 9911;
+    iconBox.backgroundColor = [NeedleCurrentColor() colorWithAlphaComponent:0.18];
+    iconBox.layer.cornerRadius = 9;
+    iconBox.layer.borderWidth = 0.5;
+    iconBox.layer.borderColor = [NeedleCurrentColor() colorWithAlphaComponent:0.35].CGColor;
+    if (row.symbol) {
+        UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:15 weight:UIImageSymbolWeightSemibold];
+        UIImage *icon = [UIImage systemImageNamed:row.symbol withConfiguration:cfg];
+        UIImageView *iv = [[UIImageView alloc] initWithImage:icon];
+        iv.tintColor = NeedleCurrentColor();
+        iv.contentMode = UIViewContentModeCenter;
+        iv.frame = iconBox.bounds;
+        [iconBox addSubview:iv];
+    }
+    [cell.contentView addSubview:iconBox];
+
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(60, 0, cell.contentView.bounds.size.width - 120, cell.contentView.bounds.size.height)];
+    label.tag = 9912;
+    label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    label.text = row.label;
+    label.textColor = [UIColor whiteColor];
+    label.font = [UIFont systemFontOfSize:15.5 weight:UIFontWeightSemibold];
+    [cell.contentView addSubview:label];
 
     if (row.kind == NeedleRowSwitch) {
         UISwitch *sw = [UISwitch new];
         sw.on = NeedlePrefBool(row.prefKey, row.defaultBool);
         sw.onTintColor = NeedleCurrentColor();
+        sw.transform = CGAffineTransformMakeScale(0.9, 0.9);
         objc_setAssociatedObject(sw, "_needleKey", row.prefKey, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         [sw addTarget:self action:@selector(switchFlipped:) forControlEvents:UIControlEventValueChanged];
         cell.accessoryView = sw;
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
     } else if (row.kind == NeedleRowText) {
-        UITextField *tf = [[UITextField alloc] initWithFrame:CGRectMake(0, 0, 200, 32)];
+        UITextField *tf = [[UITextField alloc] initWithFrame:CGRectMake(0, 0, 160, 32)];
         tf.text = NeedlePrefString(row.prefKey);
         tf.placeholder = row.placeholder;
-        tf.textColor = [UIColor whiteColor];
+        tf.textColor = [UIColor colorWithWhite:1.0 alpha:0.75];
         tf.textAlignment = NSTextAlignmentRight;
-        tf.font = [UIFont monospacedSystemFontOfSize:14 weight:UIFontWeightRegular];
+        tf.font = [UIFont monospacedSystemFontOfSize:12.5 weight:UIFontWeightMedium];
         tf.autocapitalizationType = UITextAutocapitalizationTypeNone;
         tf.autocorrectionType = UITextAutocorrectionTypeNo;
         tf.returnKeyType = UIReturnKeyDone;
@@ -266,8 +331,12 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
         cell.accessoryView = tf;
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
     } else if (row.kind == NeedleRowButton) {
-        cell.textLabel.textColor = NeedleCurrentColor();
-        cell.textLabel.textAlignment = NSTextAlignmentLeft;
+        label.textColor = NeedleCurrentColor();
+        UIImageView *chev = [[UIImageView alloc] initWithImage:
+            [UIImage systemImageNamed:@"chevron.right" withConfiguration:
+                [UIImageSymbolConfiguration configurationWithPointSize:12 weight:UIImageSymbolWeightBold]]];
+        chev.tintColor = [UIColor colorWithWhite:1 alpha:0.35];
+        cell.accessoryView = chev;
     }
     return cell;
 }
@@ -282,21 +351,49 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 - (UIView *)tableView:(UITableView *)t viewForHeaderInSection:(NSInteger)s {
     NeedleSection *sec = self.sections[s];
     if (!sec.title.length) return nil;
-    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, t.bounds.size.width, 44)];
-    UIView *bar = [[UIView alloc] initWithFrame:CGRectMake(20, 28, 3, 14)];
-    bar.backgroundColor = NeedleCurrentColor();
-    bar.layer.cornerRadius = 1.5;
-    [header addSubview:bar];
-    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(32, 22, t.bounds.size.width - 60, 20)];
+    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, t.bounds.size.width, 36)];
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(32, 14, t.bounds.size.width - 60, 18)];
+    lbl.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     lbl.text = sec.title.uppercaseString;
-    lbl.textColor = [UIColor colorWithWhite:0.85 alpha:1.0];
-    lbl.font = [UIFont systemFontOfSize:12 weight:UIFontWeightHeavy];
+    lbl.textColor = NeedleCurrentColor();
+    lbl.font = [UIFont systemFontOfSize:11.5 weight:UIFontWeightHeavy];
+    lbl.attributedText = [[NSAttributedString alloc] initWithString:sec.title.uppercaseString
+        attributes:@{
+            NSKernAttributeName: @1.8,
+            NSForegroundColorAttributeName: NeedleCurrentColor(),
+            NSFontAttributeName: [UIFont systemFontOfSize:11.5 weight:UIFontWeightHeavy],
+        }];
     [header addSubview:lbl];
     return header;
 }
 
 - (CGFloat)tableView:(UITableView *)t heightForHeaderInSection:(NSInteger)s {
-    return self.sections[s].title.length ? 44 : 10;
+    return self.sections[s].title.length ? 36 : 8;
+}
+
+- (UIView *)tableView:(UITableView *)t viewForFooterInSection:(NSInteger)s {
+    NeedleSection *sec = self.sections[s];
+    if (!sec.footer.length) return nil;
+    UIView *footer = [[UIView alloc] initWithFrame:CGRectMake(0, 0, t.bounds.size.width, 60)];
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(32, 8, t.bounds.size.width - 64, 60)];
+    lbl.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    lbl.text = sec.footer;
+    lbl.textColor = [UIColor colorWithWhite:1.0 alpha:0.42];
+    lbl.font = [UIFont systemFontOfSize:12.5 weight:UIFontWeightRegular];
+    lbl.numberOfLines = 0;
+    [footer addSubview:lbl];
+    return footer;
+}
+
+- (CGFloat)tableView:(UITableView *)t heightForFooterInSection:(NSInteger)s {
+    NSString *f = self.sections[s].footer;
+    if (!f.length) return 12;
+    CGFloat w = t.bounds.size.width - 64;
+    CGRect r = [f boundingRectWithSize:CGSizeMake(w, 999)
+        options:NSStringDrawingUsesLineFragmentOrigin
+        attributes:@{NSFontAttributeName: [UIFont systemFontOfSize:12.5]}
+        context:nil];
+    return ceil(r.size.height) + 20;
 }
 
 - (BOOL)textFieldShouldReturn:(UITextField *)tf {
@@ -409,6 +506,17 @@ static void _NeedleAttachLongPress(UIView *view) {
 %end
 
 static UIView *_needleFloatingHost = nil;
+static BOOL _needleFloatingHidden = NO;
+
+void NeedleHideFloatingButton(void) {
+    _needleFloatingHidden = YES;
+    if (_needleFloatingHost) _needleFloatingHost.hidden = YES;
+}
+
+void NeedleShowFloatingButton(void) {
+    _needleFloatingHidden = NO;
+    if (_needleFloatingHost) _needleFloatingHost.hidden = NO;
+}
 
 static UIView *_NeedleBuildButton(CGRect frame) {
     UIView *host = [[UIView alloc] initWithFrame:frame];
@@ -466,6 +574,7 @@ static void NeedleInstallFloatingButton(void) {
     CGFloat btnSize = 52;
     CGRect frame = CGRectMake(target.bounds.size.width - btnSize - 14, 72, btnSize, btnSize);
     _needleFloatingHost = _NeedleBuildButton(frame);
+    _needleFloatingHost.hidden = _needleFloatingHidden;
     [target addSubview:_needleFloatingHost];
     [target bringSubviewToFront:_needleFloatingHost];
 
