@@ -62,6 +62,12 @@ jobs:
             -v "$NEEDLE_VER"
           ls -la Needle-Spotify.ipa
 
+      - name: Patch alternate icons into IPA
+        run: |
+          pip3 install Pillow
+          python3 .github/scripts/patch_icons.py work/Needle-Spotify.ipa
+          ls -la work/Needle-Spotify.ipa
+
       - name: Publish Needle-Spotify.ipa
         env:
           GH_TOKEN: ${{ github.token }}

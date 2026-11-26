@@ -68,7 +68,7 @@ extern void NeedlePrefSetString(NSString *key, NSString *val);
     [self.view addSubview:self.grid];
 
     UILabel *note = [[UILabel alloc] initWithFrame:CGRectMake(24, self.view.bounds.size.height - 80, w - 48, 50)];
-    note.text = @"Preview only. Home-screen icon stays Spotify until cyan bundles the PNGs (next inject round).";
+    note.text = @"Tap a tile to change your home-screen icon.";
     note.textColor = [UIColor colorWithWhite:1 alpha:0.4];
     note.font = [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
     note.textAlignment = NSTextAlignmentCenter;
@@ -173,8 +173,13 @@ extern void NeedlePrefSetString(NSString *key, NSString *val);
     lbl.textAlignment = NSTextAlignmentCenter;
     [cell.contentView addSubview:lbl];
 
-    NSString *current = NeedlePrefString(@"PreferredIconKey") ?: @"";
-    if ([current isEqualToString:icon[@"key"]]) {
+    NSString *sysCurrent = [[UIApplication sharedApplication] alternateIconName] ?: @"";
+    NSString *prefCurrent = NeedlePrefString(@"PreferredIconKey") ?: @"";
+    NSString *key = icon[@"key"] ?: @"";
+    BOOL selected = NO;
+    if (sysCurrent.length) selected = [sysCurrent isEqualToString:key];
+    else selected = (key.length == 0 && prefCurrent.length == 0) || [prefCurrent isEqualToString:key];
+    if (selected) {
         iv.layer.borderWidth = 3;
         iv.layer.borderColor = [UIColor whiteColor].CGColor;
     }

@@ -4,18 +4,14 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.8.0";
+static NSString *const NeedleCurrentVersion = @"2.9.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Progress bar no longer freezes (fixed duplicate position hook).\n"
-           "Lockscreen tap now routes to Spotify (set ExternalContentIdentifier).\n"
-           "Share song as QR code (Discover → Share song QR).\n"
-           "Bluetooth badge in the mini player (headphone name while connected).\n"
-           "Streak tracker: see which songs you've played N days in a row.\n"
-           "Guilty pleasures: a private list that stays out of Wrapped and history.\n"
-           "Rapid preview is stubbed; needs deeper Spotify hooks, shipping next round.";
+    return @"Real app-icon changer (6 variants, swaps the home-screen icon for real).\n"
+           "Progress bar freeze fix and lockscreen-tap routing from last build.\n"
+           "QR share song, Bluetooth badge, Streaks, Guilty pleasures.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
