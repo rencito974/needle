@@ -230,35 +230,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     ];
     look.footer = @"Theme the Now Playing screen, mini player, play button and progress bar with the current album's palette.";
 
-    NeedleSection *scrobble = [NeedleSection new];
-    scrobble.title = @"Last.fm scrobble";
-    scrobble.rows = @[
-        [NeedleRow sw:@"Scrobble plays" key:@"ScrobbleOn" def:NO symbol:@"waveform.badge.plus"],
-        [NeedleRow text:@"API key" key:@"LastFmApiKey" placeholder:@"paste here" symbol:@"key"],
-        [NeedleRow text:@"Shared secret" key:@"LastFmSecret" placeholder:@"paste here" symbol:@"lock.shield"],
-        [NeedleRow text:@"Session key" key:@"LastFmSession" placeholder:@"paste from auth" symbol:@"person.badge.key"],
-        [NeedleRow button:@"Open Last.fm sign in" action:^{
-            NSString *apiKey = NeedlePrefString(@"LastFmApiKey");
-            if (!apiKey.length) {
-                [weak alert:@"API key missing" message:@"Paste your Last.fm API key first."];
-                return;
-            }
-            NSString *url = [NSString stringWithFormat:@"https://www.last.fm/api/auth/?api_key=%@", apiKey];
-            [[UIApplication sharedApplication] openURL:[NSURL URLWithString:url] options:@{} completionHandler:nil];
-        } symbol:@"safari"],
-    ];
-    scrobble.footer = @"Register at last.fm/api/account/create, paste the key and secret, tap Open Last.fm sign in, approve, then paste the session token out of the redirect URL into Session key.";
-
-    NeedleSection *about = [NeedleSection new];
-    about.title = @"About";
-    about.rows = @[
-        [NeedleRow button:@"Join the Discord" action:^{
-            [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://discord.gg/4Fk34R76tt"] options:@{} completionHandler:nil];
-        } symbol:@"bubble.left.and.bubble.right.fill"],
-    ];
-    about.footer = @"Needle v1.1";
-
-    self.sections = @[playback, sleep, look, scrobble, about];
+    self.sections = @[playback, sleep, look];
 }
 
 - (void)alert:(NSString *)title message:(NSString *)msg {
@@ -383,11 +355,11 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
             [label.trailingAnchor constraintLessThanOrEqualToAnchor:tf.leadingAnchor constant:-8],
         ]];
     } else if (row.kind == NeedleRowButton) {
-        label.textColor = NeedleCurrentColor();
+        label.textColor = [UIColor whiteColor];
         UIImageView *chev = [[UIImageView alloc] initWithImage:
-            [UIImage systemImageNamed:@"arrow.up.right" withConfiguration:
+            [UIImage systemImageNamed:@"chevron.right" withConfiguration:
                 [UIImageSymbolConfiguration configurationWithPointSize:13 weight:UIImageSymbolWeightBold]]];
-        chev.tintColor = [NeedleCurrentColor() colorWithAlphaComponent:0.55];
+        chev.tintColor = [UIColor colorWithWhite:1.0 alpha:0.3];
         chev.translatesAutoresizingMaskIntoConstraints = NO;
         [card addSubview:chev];
         [NSLayoutConstraint activateConstraints:@[
@@ -571,23 +543,41 @@ void NeedleShowFloatingButton(void) {
 
 static UIView *_NeedleBuildButton(CGRect frame) {
     UIView *host = [[UIView alloc] initWithFrame:frame];
-    host.backgroundColor = [UIColor colorWithRed:0.11 green:0.73 blue:0.33 alpha:0.95];
-    host.layer.cornerRadius = frame.size.width / 2;
+    host.backgroundColor = [UIColor clearColor];
     host.layer.shadowColor = [UIColor blackColor].CGColor;
-    host.layer.shadowOffset = CGSizeMake(0, 3);
+    host.layer.shadowOffset = CGSizeMake(0, 4);
     host.layer.shadowRadius = 10;
-    host.layer.shadowOpacity = 0.6;
-    host.layer.borderWidth = 2;
-    host.layer.borderColor = [UIColor whiteColor].CGColor;
+    host.layer.shadowOpacity = 0.35;
 
-    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:22 weight:UIImageSymbolWeightBold];
+    UIBlurEffect *blur = nil;
+    if (@available(iOS 13.0, *)) {
+        blur = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterialDark];
+    } else {
+        blur = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
+    }
+    UIVisualEffectView *vfx = [[UIVisualEffectView alloc] initWithEffect:blur];
+    vfx.frame = host.bounds;
+    vfx.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    vfx.layer.cornerRadius = frame.size.width / 2;
+    vfx.layer.masksToBounds = YES;
+    vfx.layer.borderWidth = 0.5;
+    vfx.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.35].CGColor;
+    [host addSubview:vfx];
+
+    UIView *tint = [[UIView alloc] initWithFrame:host.bounds];
+    tint.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    tint.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.08];
+    tint.layer.cornerRadius = frame.size.width / 2;
+    [vfx.contentView addSubview:tint];
+
+    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:19 weight:UIImageSymbolWeightSemibold];
     UIImage *icon = [UIImage systemImageNamed:@"gearshape.fill" withConfiguration:cfg];
     UIImageView *iv = [[UIImageView alloc] initWithImage:icon];
     iv.tintColor = [UIColor whiteColor];
     iv.contentMode = UIViewContentModeCenter;
     iv.frame = host.bounds;
     iv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    [host addSubview:iv];
+    [vfx.contentView addSubview:iv];
 
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]
         initWithTarget:[NeedleSettingsViewController class]
@@ -622,8 +612,8 @@ static void NeedleInstallFloatingButton(void) {
     }
     if (_needleFloatingHost) [_needleFloatingHost removeFromSuperview];
 
-    CGFloat btnSize = 52;
-    CGRect frame = CGRectMake(target.bounds.size.width - btnSize - 14, 72, btnSize, btnSize);
+    CGFloat btnSize = 42;
+    CGRect frame = CGRectMake(target.bounds.size.width - btnSize - 16, 68, btnSize, btnSize);
     _needleFloatingHost = _NeedleBuildButton(frame);
     _needleFloatingHost.hidden = _needleFloatingHidden;
     [target addSubview:_needleFloatingHost];
