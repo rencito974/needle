@@ -51,12 +51,6 @@ static void NeedleStartLockMotion(void) {
     }];
 }
 
-static void NeedleStopLockMotion(void) {
-    [_needleLockTimer invalidate];
-    _needleLockTimer = nil;
-    _needleLockSource = nil;
-}
-
 %hook MPNowPlayingInfoCenter
 - (void)setNowPlayingInfo:(NSDictionary *)info {
     if (NeedlePrefBool(@"LockMotion", YES)) {

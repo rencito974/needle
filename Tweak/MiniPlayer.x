@@ -65,8 +65,8 @@ static void NeedleUpdateMiniProgress(float frac) {
     for (UIScene *s in scenes) {
         if (![s isKindOfClass:[UIWindowScene class]]) continue;
         for (UIWindow *w in ((UIWindowScene *)s).windows) {
-            __block void (^walk)(UIView *) = nil;
-            walk = ^(UIView *v) {
+            __block __weak void (^weakWalk)(UIView *) = nil;
+            void (^walk)(UIView *) = ^(UIView *v) {
                 if ([NSStringFromClass([v class]) isEqualToString:@"SPTNowPlayingBar"]) {
                     UIView *p = objc_getAssociatedObject(v, &_kNeedleMiniProgress);
                     if (p) {
@@ -75,8 +75,10 @@ static void NeedleUpdateMiniProgress(float frac) {
                         [UIView animateWithDuration:0.4 animations:^{ p.frame = f; }];
                     }
                 }
-                for (UIView *c in v.subviews) walk(c);
+                void (^strongWalk)(UIView *) = weakWalk;
+                for (UIView *c in v.subviews) if (strongWalk) strongWalk(c);
             };
+            weakWalk = walk;
             walk(w);
         }
     }
