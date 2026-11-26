@@ -4,15 +4,15 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.15.0";
+static NSString *const NeedleCurrentVersion = @"2.16.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Turntable mode: rotate your phone to landscape and Spotify disappears behind a full screen spinning vinyl with the current album art pressed into the label.\n"
-           "Drag the disc to spin it faster or scratch it; pinch to change the idle RPM.\n"
-           "Volume boost is now a slider from 0.5x to 3.5x, not a fixed 1.5x toggle.\n"
-           "Album artwork is now cached from the system Now Playing card so the turntable has something to show.";
+    return @"Album wall: scrollable mosaic of every album you've played this year, sorted by play count. Tap through Settings > You > Album wall.\n"
+           "Rating lightning: 1-10 pad. Tap fast, rate a lot. Needle stores it per track.\n"
+           "Forgotten favorites: tracks you played 3+ times then haven't touched in 30+ days. Settings > Discover > Forgotten favorites.\n"
+           "Note: true Dynamic Island / Live Activity needs a separate widget extension bundle, which a cyan injected tweak can't ship. The lock screen Now Playing card already uses what we set.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {

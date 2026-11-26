@@ -96,7 +96,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.15";
+    return @"2.16";
 }
 
 @implementation NeedleSettingsViewController
@@ -401,6 +401,14 @@ static NSString *_NeedleVersionTag(void) {
             extern void NeedleOpenQRShare(void);
             NeedleOpenQRShare();
         } symbol:@"qrcode"],
+        [NeedleRow button:@"Rate this song" action:^{
+            extern void NeedleOpenRating(void);
+            NeedleOpenRating();
+        } symbol:@"star.leadinghalf.filled"],
+        [NeedleRow button:@"Forgotten favorites" action:^{
+            extern void NeedleOpenDormant(void);
+            NeedleOpenDormant();
+        } symbol:@"clock.arrow.circlepath"],
         [NeedleRow button:@"Similar songs" action:^{
             extern void NeedleOpenSimilarSongs(void);
             NeedleOpenSimilarSongs();
@@ -442,6 +450,10 @@ static NSString *_NeedleVersionTag(void) {
             extern void NeedleOpenWrapped(void);
             NeedleOpenWrapped();
         } symbol:@"chart.bar.fill"],
+        [NeedleRow button:@"Album wall" action:^{
+            extern void NeedleOpenAlbumWall(void);
+            NeedleOpenAlbumWall();
+        } symbol:@"square.grid.2x2.fill"],
         [NeedleRow button:@"Themes" action:^{
             extern void NeedleOpenThemeStore(void);
             NeedleOpenThemeStore();
