@@ -160,11 +160,6 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     _NeedleSyncGearVisibility();
 }
 
-- (void)viewDidLayoutSubviews {
-    [super viewDidLayoutSubviews];
-    self.bgLayer.frame = self.view.bounds;
-}
-
 - (void)dismissSelf {
     [self dismissViewControllerAnimated:YES completion:nil];
 }
