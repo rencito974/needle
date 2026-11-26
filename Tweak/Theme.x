@@ -26,6 +26,7 @@ extern BOOL NeedlePrefBool(NSString *key, BOOL def);
 @implementation _NeedleGradientView
 + (Class)layerClass { return [CAGradientLayer class]; }
 - (void)apply:(UIColor *)top {
+    if (!top) top = [UIColor colorWithWhite:0.08 alpha:1.0];
     CAGradientLayer *l = (CAGradientLayer *)self.layer;
     UIColor *bottom = [UIColor colorWithWhite:0.03 alpha:1.0];
     l.colors = @[(id)top.CGColor, (id)bottom.CGColor];
@@ -37,19 +38,23 @@ extern BOOL NeedlePrefBool(NSString *key, BOOL def);
 
 static void _NeedleInstallBackground(UIViewController *vc) {
     if (!NeedlePrefBool(@"AlbumColorUI", YES)) return;
+    if (!vc || !vc.view) return;
     _NeedleGradientView *bg = objc_getAssociatedObject(vc, "_needleBg");
     if (!bg) {
         bg = [[_NeedleGradientView alloc] initWithFrame:vc.view.bounds];
         bg.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         [vc.view insertSubview:bg atIndex:0];
         objc_setAssociatedObject(vc, "_needleBg", bg, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        __weak _NeedleGradientView *weakBg = bg;
         [[NSNotificationCenter defaultCenter] addObserverForName:@"NeedlePaletteChanged"
             object:nil
             queue:[NSOperationQueue mainQueue]
             usingBlock:^(NSNotification *n) {
-                _NeedleGradientView *v = objc_getAssociatedObject(vc, "_needleBg");
+                _NeedleGradientView *strong = weakBg;
+                if (!strong) return;
+                UIColor *c = [n.object isKindOfClass:[UIColor class]] ? (UIColor *)n.object : nil;
                 [UIView animateWithDuration:0.6 animations:^{
-                    [v apply:(UIColor *)n.object];
+                    [strong apply:c];
                 }];
             }];
     }
@@ -83,21 +88,19 @@ static void _NeedleInstallBackground(UIViewController *vc) {
 - (void)setArtworkImage:(UIImage *)img {
     %orig;
     if (!img || !NeedlePrefBool(@"AlbumColorUI", YES)) return;
-    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-        UIColor *c = NeedleDominantColor(img);
-        dispatch_async(dispatch_get_main_queue(), ^{
-            NeedleSetPalette(c);
-        });
+    UIImage *retained = img;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIColor *c = NeedleDominantColor(retained);
+        NeedleSetPalette(c);
     });
 }
 - (void)setImage:(UIImage *)img {
     %orig;
     if (!img || !NeedlePrefBool(@"AlbumColorUI", YES)) return;
-    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-        UIColor *c = NeedleDominantColor(img);
-        dispatch_async(dispatch_get_main_queue(), ^{
-            NeedleSetPalette(c);
-        });
+    UIImage *retained = img;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIColor *c = NeedleDominantColor(retained);
+        NeedleSetPalette(c);
     });
 }
 %end

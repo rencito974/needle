@@ -22,14 +22,21 @@ static NSArray *NeedleFisherYates(NSArray *input) {
 @interface SPTContextualShuffle_ShuffleToggleModelImpl : NSObject
 @end
 
+static BOOL NeedleReadShuffleState(id target) {
+    @try {
+        id state = [target valueForKey:@"shuffle"];
+        if ([state respondsToSelector:@selector(boolValue)]) return [state boolValue];
+    } @catch (NSException *e) {
+    }
+    return NO;
+}
+
 %hook SPTPlayerContext
 - (NSArray *)tracks {
     NSArray *orig = %orig;
     if (!NeedlePrefBool(@"RealShuffle", YES)) return orig;
-    id ctx = [self valueForKey:@"shuffle"];
-    if ([ctx respondsToSelector:@selector(boolValue)] && [ctx boolValue]) {
-        return NeedleFisherYates(orig);
-    }
+    if (![orig isKindOfClass:[NSArray class]]) return orig;
+    if (NeedleReadShuffleState(self)) return NeedleFisherYates(orig);
     return orig;
 }
 %end
@@ -37,9 +44,7 @@ static NSArray *NeedleFisherYates(NSArray *input) {
 %hook SPTPlayerQueueImplementation
 - (void)setNextTracks:(NSArray *)tracks {
     if (!NeedlePrefBool(@"RealShuffle", YES)) { %orig; return; }
-    id shuffleState = [self valueForKey:@"shuffle"];
-    BOOL shuffling = [shuffleState respondsToSelector:@selector(boolValue)] && [shuffleState boolValue];
-    if (shuffling && tracks.count > 1) {
+    if (NeedleReadShuffleState(self) && tracks.count > 1) {
         %orig(NeedleFisherYates(tracks));
         return;
     }
@@ -51,10 +56,7 @@ static NSArray *NeedleFisherYates(NSArray *input) {
 - (NSArray *)nextTracks {
     NSArray *orig = %orig;
     if (!NeedlePrefBool(@"RealShuffle", YES) || orig.count < 2) return orig;
-    id shuffleState = [self valueForKey:@"shuffle"];
-    if ([shuffleState respondsToSelector:@selector(boolValue)] && [shuffleState boolValue]) {
-        return NeedleFisherYates(orig);
-    }
+    if (NeedleReadShuffleState(self)) return NeedleFisherYates(orig);
     return orig;
 }
 %end
