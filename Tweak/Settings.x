@@ -408,39 +408,76 @@ static void _NeedleAttachLongPress(UIView *view) {
 }
 %end
 
+@interface _NeedleOverlayWindow : UIWindow
+@end
+@implementation _NeedleOverlayWindow
+- (BOOL)pointInside:(CGPoint)pt withEvent:(UIEvent *)e {
+    for (UIView *sub in self.subviews) {
+        if (CGRectContainsPoint(sub.frame, pt)) return YES;
+    }
+    return NO;
+}
+@end
+
+@interface _NeedleOverlayVC : UIViewController
+@end
+@implementation _NeedleOverlayVC
+- (BOOL)prefersStatusBarHidden { return NO; }
+- (UIStatusBarStyle)preferredStatusBarStyle { return UIStatusBarStyleLightContent; }
+@end
+
+static _NeedleOverlayWindow *_needleOverlayWin = nil;
 static UIView *_needleFloatingHost = nil;
 
 static void NeedleInstallFloatingButton(void) {
-    UIWindow *key = nil;
+    UIWindowScene *targetScene = nil;
     NSArray *scenes = [[UIApplication sharedApplication].connectedScenes allObjects];
     for (UIScene *s in scenes) {
         if ([s isKindOfClass:[UIWindowScene class]] && s.activationState == UISceneActivationStateForegroundActive) {
-            for (UIWindow *w in ((UIWindowScene *)s).windows) {
-                if (w.isKeyWindow) { key = w; break; }
-            }
-            if (key) break;
+            targetScene = (UIWindowScene *)s;
+            break;
         }
     }
-    if (!key) return;
-    if (_needleFloatingHost && _needleFloatingHost.window == key) return;
-    if (_needleFloatingHost) {
-        [_needleFloatingHost removeFromSuperview];
+    if (!targetScene) {
+        for (UIScene *s in scenes) {
+            if ([s isKindOfClass:[UIWindowScene class]]) { targetScene = (UIWindowScene *)s; break; }
+        }
+    }
+    if (!targetScene) return;
+
+    if (_needleOverlayWin && _needleOverlayWin.windowScene == targetScene) {
+        _needleOverlayWin.hidden = NO;
+        return;
+    }
+    if (_needleOverlayWin) {
+        _needleOverlayWin.hidden = YES;
+        _needleOverlayWin = nil;
         _needleFloatingHost = nil;
     }
 
-    CGFloat btnSize = 44;
-    CGRect frame = CGRectMake(key.bounds.size.width - btnSize - 12, 70, btnSize, btnSize);
+    _needleOverlayWin = [[_NeedleOverlayWindow alloc] initWithWindowScene:targetScene];
+    _needleOverlayWin.frame = targetScene.coordinateSpace.bounds;
+    _needleOverlayWin.backgroundColor = [UIColor clearColor];
+    _needleOverlayWin.windowLevel = UIWindowLevelAlert + 1;
+    _needleOverlayWin.rootViewController = [_NeedleOverlayVC new];
+    _needleOverlayWin.rootViewController.view.backgroundColor = [UIColor clearColor];
+    _needleOverlayWin.userInteractionEnabled = YES;
+    _needleOverlayWin.hidden = NO;
+
+    CGFloat btnSize = 48;
+    CGFloat winW = _needleOverlayWin.bounds.size.width;
+    CGRect frame = CGRectMake(winW - btnSize - 14, 72, btnSize, btnSize);
     _needleFloatingHost = [[UIView alloc] initWithFrame:frame];
-    _needleFloatingHost.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleBottomMargin;
-    _needleFloatingHost.backgroundColor = [UIColor colorWithWhite:0 alpha:0.55];
+    _needleFloatingHost.backgroundColor = [UIColor colorWithRed:0.11 green:0.73 blue:0.33 alpha:0.92];
     _needleFloatingHost.layer.cornerRadius = btnSize / 2;
     _needleFloatingHost.layer.shadowColor = [UIColor blackColor].CGColor;
-    _needleFloatingHost.layer.shadowOffset = CGSizeMake(0, 2);
-    _needleFloatingHost.layer.shadowRadius = 6;
-    _needleFloatingHost.layer.shadowOpacity = 0.4;
-    _needleFloatingHost.alpha = 0.78;
+    _needleFloatingHost.layer.shadowOffset = CGSizeMake(0, 3);
+    _needleFloatingHost.layer.shadowRadius = 8;
+    _needleFloatingHost.layer.shadowOpacity = 0.55;
+    _needleFloatingHost.layer.borderWidth = 1.5;
+    _needleFloatingHost.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.35].CGColor;
 
-    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:19 weight:UIImageSymbolWeightBold];
+    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:21 weight:UIImageSymbolWeightBold];
     UIImage *icon = [UIImage systemImageNamed:@"gearshape.fill" withConfiguration:cfg];
     UIImageView *iv = [[UIImageView alloc] initWithImage:icon];
     iv.tintColor = [UIColor whiteColor];
@@ -459,17 +496,41 @@ static void NeedleInstallFloatingButton(void) {
         action:@selector(_needleGearPan:)];
     [_needleFloatingHost addGestureRecognizer:pan];
 
-    [key addSubview:_needleFloatingHost];
+    [_needleOverlayWin addSubview:_needleFloatingHost];
+
+    CABasicAnimation *pulse = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
+    pulse.fromValue = @0.5;
+    pulse.toValue = @1.0;
+    pulse.duration = 0.35;
+    pulse.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+    [_needleFloatingHost.layer addAnimation:pulse forKey:@"spawn"];
+}
+
+static NSTimer *_needleInstallTimer = nil;
+
+static void NeedleStartInstallWatchdog(void) {
+    if (_needleInstallTimer) return;
+    _needleInstallTimer = [NSTimer scheduledTimerWithTimeInterval:2.0 repeats:YES block:^(NSTimer *t) {
+        NeedleInstallFloatingButton();
+        if (_needleOverlayWin && _needleFloatingHost.superview) {
+        }
+    }];
 }
 
 %hook UIViewController
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            NeedleInstallFloatingButton();
-        });
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        NeedleInstallFloatingButton();
+    });
+}
+%end
+
+%hook UIApplication
+- (void)_setForegroundState:(NSInteger)state {
+    %orig;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        NeedleInstallFloatingButton();
     });
 }
 %end
@@ -485,20 +546,26 @@ static void NeedleInstallFloatingButton(void) {
 %end
 
 %ctor {
-    static BOOL announced = NO;
-    if (!announced && !NeedlePrefBool(@"HasSeenWelcome", NO)) {
-        announced = YES;
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            UIViewController *top = _NeedleTopVC();
-            if (!top) return;
-            UIAlertController *a = [UIAlertController
-                alertControllerWithTitle:@"Needle installed"
-                message:@"Open settings by: long-pressing the mini player, shaking the phone, or three-finger-triple-tap anywhere."
-                preferredStyle:UIAlertControllerStyleAlert];
-            [a addAction:[UIAlertAction actionWithTitle:@"Got it" style:UIAlertActionStyleDefault handler:^(UIAlertAction *_){
-                NeedlePrefSetBool(@"HasSeenWelcome", YES);
-            }]];
-            [top presentViewController:a animated:YES completion:nil];
-        });
-    }
+    [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+        object:nil
+        queue:[NSOperationQueue mainQueue]
+        usingBlock:^(NSNotification *n) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                NeedleInstallFloatingButton();
+                NeedleStartInstallWatchdog();
+            });
+        }];
+    [[NSNotificationCenter defaultCenter] addObserverForName:UISceneDidActivateNotification
+        object:nil
+        queue:[NSOperationQueue mainQueue]
+        usingBlock:^(NSNotification *n) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                NeedleInstallFloatingButton();
+                NeedleStartInstallWatchdog();
+            });
+        }];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        NeedleInstallFloatingButton();
+        NeedleStartInstallWatchdog();
+    });
 }
