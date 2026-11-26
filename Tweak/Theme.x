@@ -19,6 +19,8 @@ extern BOOL NeedlePrefBool(NSString *key, BOOL def);
 @end
 @interface SPTTabBarContainer : UIViewController
 @end
+@interface SPTNowPlayingBar : UIView
+@end
 
 @interface _NeedleGradientView : UIView
 @end
@@ -84,6 +86,21 @@ static void _NeedleInstallBackground(UIViewController *vc) {
 }
 %end
 
+static void _NeedleStartBreathing(UIView *view) {
+    if (!view) return;
+    if (!NeedlePrefBool(@"ArtworkBreathing", YES)) return;
+    if (objc_getAssociatedObject(view, "_needleBreathing")) return;
+    objc_setAssociatedObject(view, "_needleBreathing", @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    CABasicAnimation *a = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
+    a.fromValue = @1.0;
+    a.toValue = @1.03;
+    a.duration = 3.5;
+    a.autoreverses = YES;
+    a.repeatCount = HUGE_VALF;
+    a.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+    [view.layer addAnimation:a forKey:@"needleBreathing"];
+}
+
 %hook SPTNowPlayingContentCoverArtCell
 - (void)setArtworkImage:(UIImage *)img {
     %orig;
@@ -102,6 +119,41 @@ static void _NeedleInstallBackground(UIViewController *vc) {
         UIColor *c = NeedleDominantColor(retained);
         NeedleSetPalette(c);
     });
+}
+- (void)didMoveToWindow {
+    %orig;
+    if (self.window) _NeedleStartBreathing(self);
+}
+%end
+
+%hook SPTNowPlayingBar
+- (void)didMoveToSuperview {
+    %orig;
+    if (!NeedlePrefBool(@"AlbumColorUI", YES)) return;
+    if (!self.superview) return;
+    _NeedleGradientView *bg = objc_getAssociatedObject(self, "_needleMiniBg");
+    if (!bg) {
+        bg = [[_NeedleGradientView alloc] initWithFrame:self.bounds];
+        bg.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        bg.layer.cornerRadius = 12;
+        bg.layer.masksToBounds = YES;
+        bg.alpha = 0.9;
+        [self insertSubview:bg atIndex:0];
+        objc_setAssociatedObject(self, "_needleMiniBg", bg, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        __weak _NeedleGradientView *weakBg = bg;
+        [[NSNotificationCenter defaultCenter] addObserverForName:@"NeedlePaletteChanged"
+            object:nil
+            queue:[NSOperationQueue mainQueue]
+            usingBlock:^(NSNotification *n) {
+                _NeedleGradientView *strong = weakBg;
+                if (!strong) return;
+                UIColor *c = [n.object isKindOfClass:[UIColor class]] ? (UIColor *)n.object : nil;
+                [UIView animateWithDuration:0.6 animations:^{
+                    [strong apply:c];
+                }];
+            }];
+    }
+    [bg apply:NeedleCurrentColor()];
 }
 %end
 
