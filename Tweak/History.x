@@ -4,6 +4,9 @@
 extern BOOL NeedlePrefBool(NSString *key, BOOL def);
 extern UIColor *NeedleCurrentColor(void);
 
+__weak id _needleSeekPlayer = nil;
+NSMutableDictionary *_needleCurrentTrackCache = nil;
+
 static NSString *NeedleHistoryPath(void) {
     NSString *doc = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
     return [doc stringByAppendingPathComponent:@"NeedleHistory.plist"];
@@ -87,9 +90,6 @@ void NeedleClearHistory(void) {
     NeedleLogPlay(name ?: @"Unknown", artist ?: @"Unknown", album ?: @"", dur);
 }
 %end
-
-__weak id _needleSeekPlayer = nil;
-NSMutableDictionary *_needleCurrentTrackCache = nil;
 
 extern void NeedleOnPositionChanged(id player, NSTimeInterval pos);
 
