@@ -6,12 +6,12 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetBool(NSString *key, BOOL val);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
+extern NSMutableDictionary *_needleCurrentTrackCache;
 
 typedef NS_ENUM(NSInteger, NeedleRowKind) {
     NeedleRowSwitch,
     NeedleRowText,
     NeedleRowButton,
-    NeedleRowFooter,
 };
 
 @interface NeedleRow : NSObject
@@ -34,9 +34,6 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     r.symbol = sym;
     return r;
 }
-+ (instancetype)sw:(NSString *)label key:(NSString *)key def:(BOOL)def {
-    return [self sw:label key:key def:def symbol:nil];
-}
 + (instancetype)text:(NSString *)label key:(NSString *)key placeholder:(NSString *)ph symbol:(NSString *)sym {
     NeedleRow *r = [NeedleRow new];
     r.kind = NeedleRowText;
@@ -46,9 +43,6 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     r.symbol = sym;
     return r;
 }
-+ (instancetype)text:(NSString *)label key:(NSString *)key placeholder:(NSString *)ph {
-    return [self text:label key:key placeholder:ph symbol:nil];
-}
 + (instancetype)button:(NSString *)label action:(void (^)(void))action symbol:(NSString *)sym {
     NeedleRow *r = [NeedleRow new];
     r.kind = NeedleRowButton;
@@ -57,44 +51,52 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     r.symbol = sym;
     return r;
 }
-+ (instancetype)button:(NSString *)label action:(void (^)(void))action {
-    return [self button:label action:action symbol:nil];
-}
-+ (instancetype)footer:(NSString *)text {
-    NeedleRow *r = [NeedleRow new];
-    r.kind = NeedleRowFooter;
-    r.label = text;
-    return r;
-}
 @end
 
 @interface NeedleSection : NSObject
 @property (nonatomic, copy) NSString *title;
 @property (nonatomic, strong) NSArray<NeedleRow *> *rows;
-@property (nonatomic, copy) NSString *footer;
 @end
 @implementation NeedleSection
+@end
+
+@interface NeedleHeroView : UIView
+@property (nonatomic, strong) UILabel *trackLabel;
+@property (nonatomic, strong) UILabel *artistLabel;
+@property (nonatomic, strong) UIButton *qrButton;
+@property (nonatomic, strong) UIView *playingStrip;
+@end
+@implementation NeedleHeroView
 @end
 
 @interface NeedleSettingsViewController : UIViewController <UITableViewDataSource, UITableViewDelegate, UITextFieldDelegate>
 @property (nonatomic, strong) UITableView *table;
 @property (nonatomic, strong) NSArray<NeedleSection *> *sections;
 @property (nonatomic, strong) CAGradientLayer *bgLayer;
+@property (nonatomic, strong) NeedleHeroView *hero;
 @end
+
+static NSString *_NeedleVersionTag(void) {
+    return @"2.13";
+}
 
 @implementation NeedleSettingsViewController
 
 - (void)loadView {
     UIView *root = [[UIView alloc] initWithFrame:UIScreen.mainScreen.bounds];
-    root.backgroundColor = [UIColor colorWithWhite:0.02 alpha:1];
+    root.backgroundColor = [UIColor blackColor];
+
     self.bgLayer = [CAGradientLayer layer];
     UIColor *accent = NeedleCurrentColor();
-    self.bgLayer.colors = @[(id)[accent colorWithAlphaComponent:0.22].CGColor,
-                            (id)[accent colorWithAlphaComponent:0.06].CGColor,
-                            (id)[UIColor colorWithWhite:0.02 alpha:1].CGColor];
-    self.bgLayer.locations = @[@0.0, @0.18, @0.45];
+    self.bgLayer.colors = @[
+        (id)[accent colorWithAlphaComponent:0.28].CGColor,
+        (id)[accent colorWithAlphaComponent:0.05].CGColor,
+        (id)[UIColor blackColor].CGColor,
+    ];
+    self.bgLayer.locations = @[@0.0, @0.12, @0.42];
     self.bgLayer.frame = root.bounds;
     [root.layer insertSublayer:self.bgLayer atIndex:0];
+
     self.view = root;
 }
 
@@ -103,49 +105,116 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     [self buildModel];
 
     CGFloat w = self.view.bounds.size.width;
-    CGFloat headerH = 130;
-    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, headerH)];
-    header.autoresizingMask = UIViewAutoresizingFlexibleWidth;
 
-    UIButton *close = [UIButton buttonWithType:UIButtonTypeSystem];
-    close.frame = CGRectMake(w - 56, 62, 36, 36);
-    close.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
-    close.backgroundColor = [UIColor colorWithWhite:1 alpha:0.1];
-    close.layer.cornerRadius = 18;
-    [close setImage:[UIImage systemImageNamed:@"xmark"
-        withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
-    close.tintColor = [UIColor whiteColor];
-    [close addTarget:self action:@selector(dismissSelf) forControlEvents:UIControlEventTouchUpInside];
-    [header addSubview:close];
-
-    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(24, 70, w - 90, 44)];
-    title.text = @"Settings";
-    title.textColor = [UIColor whiteColor];
-    title.font = [UIFont systemFontOfSize:34 weight:UIFontWeightBold];
-    title.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    [header addSubview:title];
-
-    [self.view addSubview:header];
-
-    self.table = [[UITableView alloc] initWithFrame:
-        CGRectMake(0, headerH, w, self.view.bounds.size.height - headerH)
-        style:UITableViewStyleGrouped];
-    self.table.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    self.table = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStylePlain];
     self.table.backgroundColor = [UIColor clearColor];
     self.table.separatorStyle = UITableViewCellSeparatorStyleNone;
-    self.table.rowHeight = 56;
-    self.table.contentInset = UIEdgeInsetsMake(0, 0, 60, 0);
-    if ([self.table respondsToSelector:NSSelectorFromString(@"setSectionHeaderTopPadding:")]) {
-        [self.table setValue:@0 forKey:@"sectionHeaderTopPadding"];
-    }
+    self.table.rowHeight = 54;
+    self.table.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    self.table.contentInset = UIEdgeInsetsMake(0, 0, 80, 0);
+    self.table.showsVerticalScrollIndicator = NO;
     self.table.dataSource = self;
     self.table.delegate = self;
     [self.view addSubview:self.table];
+
+    self.hero = [self buildHero:w];
+    self.table.tableHeaderView = self.hero;
+}
+
+- (NeedleHeroView *)buildHero:(CGFloat)w {
+    BOOL playing = (_needleCurrentTrackCache[@"name"] != nil) && [_needleCurrentTrackCache[@"name"] length] > 0;
+    CGFloat heroH = playing ? 242 : 176;
+    NeedleHeroView *hero = [[NeedleHeroView alloc] initWithFrame:CGRectMake(0, 0, w, heroH)];
+    hero.backgroundColor = [UIColor clearColor];
+
+    UIButton *close = [UIButton buttonWithType:UIButtonTypeSystem];
+    close.frame = CGRectMake(w - 60, 60, 42, 42);
+    close.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
+    UIVisualEffectView *blur = [[UIVisualEffectView alloc] initWithEffect:
+        [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterialDark]];
+    blur.frame = close.bounds;
+    blur.layer.cornerRadius = 21;
+    blur.layer.masksToBounds = YES;
+    blur.userInteractionEnabled = NO;
+    [close insertSubview:blur atIndex:0];
+    [close setImage:[UIImage systemImageNamed:@"xmark"
+        withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightBold]]
+        forState:UIControlStateNormal];
+    close.tintColor = [UIColor whiteColor];
+    [close addTarget:self action:@selector(dismissSelf) forControlEvents:UIControlEventTouchUpInside];
+    [hero addSubview:close];
+
+    UILabel *wordmark = [[UILabel alloc] initWithFrame:CGRectMake(22, 60, w - 90, 46)];
+    wordmark.text = @"Needle";
+    wordmark.textColor = [UIColor whiteColor];
+    wordmark.font = [UIFont systemFontOfSize:42 weight:UIFontWeightBlack];
+    [hero addSubview:wordmark];
+
+    UILabel *sub = [[UILabel alloc] initWithFrame:CGRectMake(22, 108, w - 44, 18)];
+    sub.text = [NSString stringWithFormat:@"v%@", _NeedleVersionTag()];
+    sub.textColor = [UIColor colorWithWhite:1 alpha:0.42];
+    sub.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
+    [hero addSubview:sub];
+
+    if (playing) {
+        UIView *strip = [[UIView alloc] initWithFrame:CGRectMake(22, 152, w - 44, 72)];
+        strip.backgroundColor = [NeedleCurrentColor() colorWithAlphaComponent:0.14];
+        strip.layer.cornerRadius = 20;
+        strip.layer.borderWidth = 0.5;
+        strip.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.1].CGColor;
+        [hero addSubview:strip];
+
+        UIView *dot = [[UIView alloc] initWithFrame:CGRectMake(18, 24, 10, 10)];
+        dot.backgroundColor = NeedleCurrentColor();
+        dot.layer.cornerRadius = 5;
+        [strip addSubview:dot];
+        CABasicAnimation *pulse = [CABasicAnimation animationWithKeyPath:@"opacity"];
+        pulse.fromValue = @0.4;
+        pulse.toValue = @1.0;
+        pulse.duration = 0.9;
+        pulse.autoreverses = YES;
+        pulse.repeatCount = HUGE_VALF;
+        [dot.layer addAnimation:pulse forKey:@"pulse"];
+
+        UILabel *trackLbl = [[UILabel alloc] initWithFrame:CGRectMake(36, 10, strip.frame.size.width - 86, 24)];
+        trackLbl.text = _needleCurrentTrackCache[@"name"] ?: @"";
+        trackLbl.textColor = [UIColor whiteColor];
+        trackLbl.font = [UIFont systemFontOfSize:16 weight:UIFontWeightBold];
+        [strip addSubview:trackLbl];
+
+        UILabel *artistLbl = [[UILabel alloc] initWithFrame:CGRectMake(36, 34, strip.frame.size.width - 86, 20)];
+        artistLbl.text = _needleCurrentTrackCache[@"artist"] ?: @"";
+        artistLbl.textColor = [UIColor colorWithWhite:1 alpha:0.6];
+        artistLbl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
+        [strip addSubview:artistLbl];
+
+        UIButton *qr = [UIButton buttonWithType:UIButtonTypeSystem];
+        qr.frame = CGRectMake(strip.frame.size.width - 54, 14, 44, 44);
+        qr.backgroundColor = NeedleCurrentColor();
+        qr.layer.cornerRadius = 14;
+        [qr setImage:[UIImage systemImageNamed:@"qrcode"
+            withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:18 weight:UIImageSymbolWeightBold]]
+            forState:UIControlStateNormal];
+        qr.tintColor = [UIColor whiteColor];
+        [qr addTarget:self action:@selector(openQR) forControlEvents:UIControlEventTouchUpInside];
+        [strip addSubview:qr];
+        hero.qrButton = qr;
+    }
+
+    return hero;
+}
+
+- (void)openQR {
+    extern void NeedleOpenQRShare(void);
+    UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+    [fb impactOccurred];
+    [self dismissViewControllerAnimated:YES completion:^{ NeedleOpenQRShare(); }];
 }
 
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
     if (self.bgLayer) self.bgLayer.frame = self.view.bounds;
+    if (self.hero && self.table.tableHeaderView != self.hero) self.table.tableHeaderView = self.hero;
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -171,70 +240,68 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     playback.title = @"Playback";
     playback.rows = @[
         [NeedleRow sw:@"Fisher Yates shuffle" key:@"RealShuffle" def:YES symbol:@"shuffle"],
-        [NeedleRow sw:@"Shuffle lock (no auto-off)" key:@"ShuffleLock" def:NO symbol:@"lock.shield"],
-        [NeedleRow sw:@"Enhanced crossfade (20 s)" key:@"CrossfadeMax" def:NO symbol:@"waveform.path.ecg"],
+        [NeedleRow sw:@"Shuffle lock" key:@"ShuffleLock" def:NO symbol:@"lock.shield"],
+        [NeedleRow sw:@"Crossfade 20 s" key:@"CrossfadeMax" def:NO symbol:@"waveform.path.ecg"],
         [NeedleRow sw:@"Gapless within album" key:@"GaplessAlbum" def:YES symbol:@"forward.end"],
         [NeedleRow sw:@"Force 320 kbps" key:@"HighBitrate" def:NO symbol:@"4k.tv"],
-        [NeedleRow sw:@"Volume boost (1.5×)" key:@"VolumeBoost" def:NO symbol:@"speaker.wave.3.fill"],
+        [NeedleRow sw:@"Volume boost" key:@"VolumeBoost" def:NO symbol:@"speaker.wave.3.fill"],
         [NeedleRow sw:@"Free-tier unlocks" key:@"FreeUnlocks" def:NO symbol:@"crown.fill"],
     ];
-    playback.footer = @"Free-tier unlocks flip Spotify client flags to pretend you're premium (unlimited skips, on-demand play). Server may still refuse; use at your own risk.";
 
     extern void NeedleStartSleepTimer(NSInteger minutes);
     extern void NeedleCancelSleepTimer(void);
-    extern NSTimeInterval NeedleSleepTimerRemaining(void);
-    extern BOOL NeedleSleepTimerActive(void);
 
     NeedleSection *sleep = [NeedleSection new];
     sleep.title = @"Sleep timer";
     sleep.rows = @[
         [NeedleRow button:@"10 minutes" action:^{
             NeedleStartSleepTimer(10);
-            [weak alert:@"Sleep timer on" message:@"Playback will pause in 10 minutes."];
+            [weak toast:@"Sleep timer on in 10 min"];
         } symbol:@"moon"],
         [NeedleRow button:@"30 minutes" action:^{
             NeedleStartSleepTimer(30);
-            [weak alert:@"Sleep timer on" message:@"Playback will pause in 30 minutes."];
+            [weak toast:@"Sleep timer on in 30 min"];
         } symbol:@"moon.stars"],
         [NeedleRow button:@"1 hour" action:^{
             NeedleStartSleepTimer(60);
-            [weak alert:@"Sleep timer on" message:@"Playback will pause in 1 hour."];
+            [weak toast:@"Sleep timer on in 1 h"];
         } symbol:@"moon.zzz"],
         [NeedleRow button:@"Cancel timer" action:^{
             NeedleCancelSleepTimer();
-            [weak alert:@"Sleep timer off" message:@"Timer cleared."];
+            [weak toast:@"Sleep timer off"];
         } symbol:@"xmark.circle"],
-        [NeedleRow sw:@"Fade out last 60 s" key:@"SleepFade" def:YES symbol:@"speaker.slash"],
+        [NeedleRow sw:@"Fade last 60 s" key:@"SleepFade" def:YES symbol:@"speaker.slash"],
     ];
-    sleep.footer = @"Fade drops the volume gradually over the last minute before pausing.";
 
     NeedleSection *look = [NeedleSection new];
     look.title = @"Look";
     look.rows = @[
         [NeedleRow sw:@"Album colored UI" key:@"AlbumColorUI" def:YES symbol:@"paintpalette"],
         [NeedleRow sw:@"Artwork breathing" key:@"ArtworkBreathing" def:YES symbol:@"waveform.path"],
-        [NeedleRow sw:@"Accent colors on controls" key:@"AccentColors" def:YES symbol:@"circle.hexagongrid.fill"],
-        [NeedleRow sw:@"Lockscreen Ken Burns (beta)" key:@"LockMotion" def:NO symbol:@"lock.iphone"],
+        [NeedleRow sw:@"Accent on controls" key:@"AccentColors" def:YES symbol:@"circle.hexagongrid.fill"],
+        [NeedleRow sw:@"Lockscreen Ken Burns" key:@"LockMotion" def:NO symbol:@"lock.iphone"],
         [NeedleRow sw:@"Mini player redesign" key:@"MiniPlayerRedesign" def:YES symbol:@"rectangle.bottomthird.inset.filled"],
         [NeedleRow sw:@"Waveform scrubber" key:@"WaveformScrubber" def:NO symbol:@"waveform"],
-        [NeedleRow sw:@"Bluetooth badge in mini" key:@"BTBadge" def:YES symbol:@"airpods"],
+        [NeedleRow sw:@"Bluetooth badge" key:@"BTBadge" def:YES symbol:@"airpods"],
     ];
-    look.footer = @"Theme and animate the Now Playing surfaces with the current album's palette.";
 
     NeedleSection *content = [NeedleSection new];
     content.title = @"Content";
     content.rows = @[
         [NeedleRow sw:@"Block all ads" key:@"BlockAds" def:YES symbol:@"nosign"],
-        [NeedleRow sw:@"DNS-level analytics block" key:@"DNSBlock" def:YES symbol:@"shield.lefthalf.filled"],
-        [NeedleRow sw:@"Skip short interludes" key:@"SkipInterludes" def:NO symbol:@"forward.end.alt"],
+        [NeedleRow sw:@"DNS analytics block" key:@"DNSBlock" def:YES symbol:@"shield.lefthalf.filled"],
+        [NeedleRow sw:@"Skip interludes" key:@"SkipInterludes" def:NO symbol:@"forward.end.alt"],
         [NeedleRow sw:@"Skip explicit tracks" key:@"SkipExplicit" def:NO symbol:@"e.square"],
-        [NeedleRow sw:@"Tap lyric → full view" key:@"LyricsTapOpensFull" def:YES symbol:@"text.quote"],
+        [NeedleRow sw:@"Tap lyric opens full" key:@"LyricsTapOpensFull" def:YES symbol:@"text.quote"],
     ];
-    content.footer = @"DNS block drops requests to pixel.spotify.com, adeventtracker, analytics.scdn.co and known ad hosts.";
 
     NeedleSection *discover = [NeedleSection new];
     discover.title = @"Discover";
     discover.rows = @[
+        [NeedleRow button:@"Share song (QR)" action:^{
+            extern void NeedleOpenQRShare(void);
+            NeedleOpenQRShare();
+        } symbol:@"qrcode"],
         [NeedleRow button:@"Similar songs" action:^{
             extern void NeedleOpenSimilarSongs(void);
             NeedleOpenSimilarSongs();
@@ -259,10 +326,6 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
             extern void NeedleOpenLocalPlayer(void);
             NeedleOpenLocalPlayer();
         } symbol:@"folder.fill"],
-        [NeedleRow button:@"Share song (QR)" action:^{
-            extern void NeedleOpenQRShare(void);
-            NeedleOpenQRShare();
-        } symbol:@"qrcode"],
         [NeedleRow button:@"Streaks" action:^{
             extern void NeedleOpenStreaks(void);
             NeedleOpenStreaks();
@@ -272,7 +335,6 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
             NeedleOpenGuilty();
         } symbol:@"eye.slash.fill"],
     ];
-    discover.footer = @"Similar / mood / mixer / session all read your local listening history. Twin playback was requested but iOS can't route one app's audio to two outputs, so it is not built.";
 
     NeedleSection *you = [NeedleSection new];
     you.title = @"You";
@@ -294,26 +356,37 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
             NeedleShowChangelogNow();
         } symbol:@"sparkles"],
     ];
-    you.footer = @"Themes override the album-extracted palette with a fixed one.";
 
-    self.sections = @[playback, sleep, look, content, discover, you];
+    self.sections = @[discover, playback, look, content, sleep, you];
 }
 
-- (void)alert:(NSString *)title message:(NSString *)msg {
-    UIAlertController *a = [UIAlertController alertControllerWithTitle:title message:msg preferredStyle:UIAlertControllerStyleAlert];
-    [a addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-    [self presentViewController:a animated:YES completion:nil];
+- (void)toast:(NSString *)text {
+    CGFloat w = self.view.bounds.size.width;
+    UIView *toast = [[UIView alloc] initWithFrame:CGRectMake(32, self.view.bounds.size.height - 160, w - 64, 52)];
+    toast.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1];
+    toast.layer.cornerRadius = 18;
+    toast.layer.borderWidth = 0.5;
+    toast.layer.borderColor = [NeedleCurrentColor() colorWithAlphaComponent:0.4].CGColor;
+    toast.alpha = 0;
+    UILabel *lbl = [[UILabel alloc] initWithFrame:toast.bounds];
+    lbl.text = text;
+    lbl.textColor = [UIColor whiteColor];
+    lbl.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
+    lbl.textAlignment = NSTextAlignmentCenter;
+    [toast addSubview:lbl];
+    [self.view addSubview:toast];
+    [UIView animateWithDuration:0.22 animations:^{ toast.alpha = 1; }];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [UIView animateWithDuration:0.4 animations:^{ toast.alpha = 0; } completion:^(BOOL f){ [toast removeFromSuperview]; }];
+    });
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)t { return self.sections.count; }
 - (NSInteger)tableView:(UITableView *)t numberOfRowsInSection:(NSInteger)s { return self.sections[s].rows.count; }
-- (NSString *)tableView:(UITableView *)t titleForHeaderInSection:(NSInteger)s { return self.sections[s].title; }
-- (NSString *)tableView:(UITableView *)t titleForFooterInSection:(NSInteger)s { return self.sections[s].footer; }
 
 - (UITableViewCell *)tableView:(UITableView *)t cellForRowAtIndexPath:(NSIndexPath *)ip {
     NeedleRow *row = self.sections[ip.section].rows[ip.row];
     NSInteger count = self.sections[ip.section].rows.count;
-    BOOL first = ip.row == 0;
     BOOL last = ip.row == count - 1;
 
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
@@ -322,68 +395,33 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     cell.imageView.hidden = YES;
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
 
-    UIView *card = [[UIView alloc] init];
-    card.backgroundColor = [UIColor colorWithWhite:0.09 alpha:1];
-    card.layer.cornerRadius = 18;
-    card.layer.maskedCorners = 0;
-    if (first) card.layer.maskedCorners |= kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
-    if (last) card.layer.maskedCorners |= kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
-    card.translatesAutoresizingMaskIntoConstraints = NO;
-    [cell.contentView addSubview:card];
-    [NSLayoutConstraint activateConstraints:@[
-        [card.leadingAnchor constraintEqualToAnchor:cell.contentView.leadingAnchor constant:18],
-        [card.trailingAnchor constraintEqualToAnchor:cell.contentView.trailingAnchor constant:-18],
-        [card.topAnchor constraintEqualToAnchor:cell.contentView.topAnchor],
-        [card.bottomAnchor constraintEqualToAnchor:cell.contentView.bottomAnchor],
-    ]];
-
-    if (!last) {
-        UIView *sep = [[UIView alloc] init];
-        sep.backgroundColor = [UIColor colorWithWhite:1 alpha:0.05];
-        sep.translatesAutoresizingMaskIntoConstraints = NO;
-        [card addSubview:sep];
-        [NSLayoutConstraint activateConstraints:@[
-            [sep.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:60],
-            [sep.trailingAnchor constraintEqualToAnchor:card.trailingAnchor],
-            [sep.bottomAnchor constraintEqualToAnchor:card.bottomAnchor],
-            [sep.heightAnchor constraintEqualToConstant:0.5],
-        ]];
-    }
+    UIView *content = cell.contentView;
 
     if (row.symbol) {
-        UIView *iconBox = [[UIView alloc] init];
-        iconBox.backgroundColor = [NeedleCurrentColor() colorWithAlphaComponent:0.18];
-        iconBox.layer.cornerRadius = 8;
-        iconBox.translatesAutoresizingMaskIntoConstraints = NO;
-        [card addSubview:iconBox];
-        [NSLayoutConstraint activateConstraints:@[
-            [iconBox.widthAnchor constraintEqualToConstant:32],
-            [iconBox.heightAnchor constraintEqualToConstant:32],
-            [iconBox.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:14],
-            [iconBox.centerYAnchor constraintEqualToAnchor:card.centerYAnchor],
-        ]];
-        UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:16 weight:UIImageSymbolWeightSemibold];
+        UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:19 weight:UIImageSymbolWeightMedium];
         UIImageView *iv = [[UIImageView alloc] initWithImage:
             [UIImage systemImageNamed:row.symbol withConfiguration:cfg]];
         iv.tintColor = NeedleCurrentColor();
         iv.contentMode = UIViewContentModeCenter;
         iv.translatesAutoresizingMaskIntoConstraints = NO;
-        [iconBox addSubview:iv];
+        [content addSubview:iv];
         [NSLayoutConstraint activateConstraints:@[
-            [iv.centerXAnchor constraintEqualToAnchor:iconBox.centerXAnchor],
-            [iv.centerYAnchor constraintEqualToAnchor:iconBox.centerYAnchor],
+            [iv.widthAnchor constraintEqualToConstant:28],
+            [iv.heightAnchor constraintEqualToConstant:28],
+            [iv.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:22],
+            [iv.centerYAnchor constraintEqualToAnchor:content.centerYAnchor],
         ]];
     }
 
     UILabel *label = [[UILabel alloc] init];
     label.text = row.label;
     label.textColor = [UIColor whiteColor];
-    label.font = [UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
+    label.font = [UIFont systemFontOfSize:16 weight:UIFontWeightRegular];
     label.translatesAutoresizingMaskIntoConstraints = NO;
-    [card addSubview:label];
+    [content addSubview:label];
     [NSLayoutConstraint activateConstraints:@[
-        [label.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:row.symbol ? 58 : 20],
-        [label.centerYAnchor constraintEqualToAnchor:card.centerYAnchor],
+        [label.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:row.symbol ? 62 : 22],
+        [label.centerYAnchor constraintEqualToAnchor:content.centerYAnchor],
     ]];
 
     if (row.kind == NeedleRowSwitch) {
@@ -393,11 +431,11 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
         sw.translatesAutoresizingMaskIntoConstraints = NO;
         objc_setAssociatedObject(sw, "_needleKey", row.prefKey, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         [sw addTarget:self action:@selector(switchFlipped:) forControlEvents:UIControlEventValueChanged];
-        [card addSubview:sw];
+        [content addSubview:sw];
         [NSLayoutConstraint activateConstraints:@[
-            [sw.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-14],
-            [sw.centerYAnchor constraintEqualToAnchor:card.centerYAnchor],
-            [label.trailingAnchor constraintLessThanOrEqualToAnchor:sw.leadingAnchor constant:-8],
+            [sw.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-18],
+            [sw.centerYAnchor constraintEqualToAnchor:content.centerYAnchor],
+            [label.trailingAnchor constraintLessThanOrEqualToAnchor:sw.leadingAnchor constant:-10],
         ]];
     } else if (row.kind == NeedleRowText) {
         UITextField *tf = [[UITextField alloc] init];
@@ -412,23 +450,36 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
         tf.delegate = self;
         tf.translatesAutoresizingMaskIntoConstraints = NO;
         objc_setAssociatedObject(tf, "_needleKey", row.prefKey, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        [card addSubview:tf];
+        [content addSubview:tf];
         [NSLayoutConstraint activateConstraints:@[
-            [tf.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-14],
-            [tf.centerYAnchor constraintEqualToAnchor:card.centerYAnchor],
+            [tf.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-18],
+            [tf.centerYAnchor constraintEqualToAnchor:content.centerYAnchor],
             [tf.widthAnchor constraintGreaterThanOrEqualToConstant:140],
             [label.trailingAnchor constraintLessThanOrEqualToAnchor:tf.leadingAnchor constant:-8],
         ]];
     } else if (row.kind == NeedleRowButton) {
         UIImageView *chev = [[UIImageView alloc] initWithImage:
             [UIImage systemImageNamed:@"chevron.right" withConfiguration:
-                [UIImageSymbolConfiguration configurationWithPointSize:13 weight:UIImageSymbolWeightSemibold]]];
-        chev.tintColor = [UIColor colorWithWhite:1 alpha:0.3];
+                [UIImageSymbolConfiguration configurationWithPointSize:12 weight:UIImageSymbolWeightBold]]];
+        chev.tintColor = [UIColor colorWithWhite:1 alpha:0.28];
         chev.translatesAutoresizingMaskIntoConstraints = NO;
-        [card addSubview:chev];
+        [content addSubview:chev];
         [NSLayoutConstraint activateConstraints:@[
-            [chev.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-16],
-            [chev.centerYAnchor constraintEqualToAnchor:card.centerYAnchor],
+            [chev.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-22],
+            [chev.centerYAnchor constraintEqualToAnchor:content.centerYAnchor],
+        ]];
+    }
+
+    if (!last) {
+        UIView *sep = [[UIView alloc] init];
+        sep.backgroundColor = [UIColor colorWithWhite:1 alpha:0.055];
+        sep.translatesAutoresizingMaskIntoConstraints = NO;
+        [content addSubview:sep];
+        [NSLayoutConstraint activateConstraints:@[
+            [sep.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:row.symbol ? 62 : 22],
+            [sep.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-18],
+            [sep.bottomAnchor constraintEqualToAnchor:content.bottomAnchor],
+            [sep.heightAnchor constraintEqualToConstant:0.5],
         ]];
     }
     return cell;
@@ -444,49 +495,37 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 - (UIView *)tableView:(UITableView *)t viewForHeaderInSection:(NSInteger)s {
     NeedleSection *sec = self.sections[s];
     if (!sec.title.length) return nil;
-    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, t.bounds.size.width, 48)];
+    CGFloat w = t.bounds.size.width;
+    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, 54)];
     header.backgroundColor = [UIColor clearColor];
-    UIView *dot = [[UIView alloc] initWithFrame:CGRectMake(24, 24, 6, 6)];
-    dot.backgroundColor = NeedleCurrentColor();
-    dot.layer.cornerRadius = 3;
-    [header addSubview:dot];
-    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(40, 14, t.bounds.size.width - 60, 26)];
+
+    UIView *bar = [[UIView alloc] initWithFrame:CGRectMake(22, 34, 14, 2)];
+    bar.backgroundColor = NeedleCurrentColor();
+    bar.layer.cornerRadius = 1;
+    [header addSubview:bar];
+
+    UILabel *lbl = [[UILabel alloc] init];
+    NSMutableAttributedString *a = [[NSMutableAttributedString alloc] initWithString:[sec.title uppercaseString]];
+    [a addAttribute:NSKernAttributeName value:@2.0 range:NSMakeRange(0, a.length)];
+    [a addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:11 weight:UIFontWeightHeavy] range:NSMakeRange(0, a.length)];
+    [a addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithWhite:1 alpha:0.52] range:NSMakeRange(0, a.length)];
+    lbl.attributedText = a;
+    lbl.frame = CGRectMake(44, 24, w - 60, 22);
     lbl.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    lbl.text = sec.title;
-    lbl.textColor = [UIColor whiteColor];
-    lbl.font = [UIFont systemFontOfSize:20 weight:UIFontWeightBold];
     [header addSubview:lbl];
     return header;
 }
 
 - (CGFloat)tableView:(UITableView *)t heightForHeaderInSection:(NSInteger)s {
-    return self.sections[s].title.length ? 48 : 12;
-}
-
-- (UIView *)tableView:(UITableView *)t viewForFooterInSection:(NSInteger)s {
-    NeedleSection *sec = self.sections[s];
-    if (!sec.footer.length) return nil;
-    UIView *footer = [[UIView alloc] initWithFrame:CGRectMake(0, 0, t.bounds.size.width, 60)];
-    footer.backgroundColor = [UIColor clearColor];
-    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(24, 10, t.bounds.size.width - 48, 60)];
-    lbl.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    lbl.text = sec.footer;
-    lbl.textColor = [UIColor colorWithWhite:1 alpha:0.42];
-    lbl.font = [UIFont systemFontOfSize:12.5 weight:UIFontWeightRegular];
-    lbl.numberOfLines = 0;
-    [footer addSubview:lbl];
-    return footer;
+    return 54;
 }
 
 - (CGFloat)tableView:(UITableView *)t heightForFooterInSection:(NSInteger)s {
-    NSString *f = self.sections[s].footer;
-    if (!f.length) return 8;
-    CGFloat w = t.bounds.size.width - 48;
-    CGRect r = [f boundingRectWithSize:CGSizeMake(w, 999)
-        options:NSStringDrawingUsesLineFragmentOrigin
-        attributes:@{NSFontAttributeName: [UIFont systemFontOfSize:12.5]}
-        context:nil];
-    return ceil(r.size.height) + 24;
+    return 12;
+}
+
+- (UIView *)tableView:(UITableView *)t viewForFooterInSection:(NSInteger)s {
+    return nil;
 }
 
 - (BOOL)textFieldShouldReturn:(UITextField *)tf {
@@ -506,6 +545,18 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
         UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
         [fb impactOccurred];
         row.action();
+    }
+}
+
+- (void)tableView:(UITableView *)t willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)ip {
+    NeedleRow *row = self.sections[ip.section].rows[ip.row];
+    if (row.kind == NeedleRowButton) {
+        UIView *flash = [[UIView alloc] initWithFrame:cell.contentView.bounds];
+        flash.backgroundColor = [UIColor clearColor];
+        flash.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        flash.userInteractionEnabled = NO;
+        flash.tag = 9988;
+        [cell.contentView insertSubview:flash atIndex:0];
     }
 }
 
@@ -599,8 +650,7 @@ static void _NeedleAttachLongPress(UIView *view) {
 %end
 
 static UIView *_needleFloatingHost = nil;
-static BOOL _needleFloatingHidden = YES;
-static BOOL _needleProfileOnScreen = NO;
+static BOOL _needleFloatingHidden = NO;
 
 void NeedleHideFloatingButton(void) {
     _needleFloatingHidden = YES;
@@ -614,7 +664,7 @@ void NeedleShowFloatingButton(void) {
 
 void _NeedleSyncGearVisibility(void) {
     if (!_needleFloatingHost) return;
-    _needleFloatingHost.hidden = !_needleProfileOnScreen;
+    _needleFloatingHost.hidden = _needleFloatingHidden;
 }
 
 static UIView *_NeedleBuildButton(CGRect frame) {
@@ -691,7 +741,7 @@ static void NeedleInstallFloatingButton(void) {
     CGFloat btnSize = 42;
     CGRect frame = CGRectMake(target.bounds.size.width - btnSize - 16, 68, btnSize, btnSize);
     _needleFloatingHost = _NeedleBuildButton(frame);
-    _needleFloatingHost.hidden = !_needleProfileOnScreen;
+    _needleFloatingHost.hidden = _needleFloatingHidden;
     [target addSubview:_needleFloatingHost];
     [target bringSubviewToFront:_needleFloatingHost];
 
@@ -725,32 +775,13 @@ static void NeedleStartInstallWatchdog(void) {
     }];
 }
 
-static BOOL _NeedleIsProfileVCClass(Class c) {
-    NSString *name = NSStringFromClass(c);
-    if (!name.length) return NO;
-    if ([name containsString:@"Profile"]) return YES;
-    if ([name containsString:@"YourLibrary"] && [name containsString:@"Account"]) return YES;
-    if ([name hasPrefix:@"SPTAccount"]) return YES;
-    return NO;
-}
-
 %hook UIViewController
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
-    if (_NeedleIsProfileVCClass([self class])) {
-        _needleProfileOnScreen = YES;
-    }
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NeedleInstallFloatingButton();
         _NeedleSyncGearVisibility();
     });
-}
-- (void)viewWillDisappear:(BOOL)animated {
-    %orig;
-    if (_NeedleIsProfileVCClass([self class])) {
-        _needleProfileOnScreen = NO;
-        _NeedleSyncGearVisibility();
-    }
 }
 %end
 

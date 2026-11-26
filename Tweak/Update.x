@@ -4,15 +4,15 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.12.0";
+static NSString *const NeedleCurrentVersion = @"2.13.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Alt icons now built from Spotify's own artwork, recoloured per theme: real Spotify shape on the home screen.\n"
-           "QR option never gets filtered out of Spotify's native Share sheet: look under Share for 'QR code'.\n"
-           "QR also pulls from the current-track cache if Spotify passes it no URL at all.\n"
-           "Change app icon from Settings > Change app icon; tap a theme then confirm.";
+    return @"Settings fully redesigned: flat list, no cards, no grey footer text, wordmark hero, letter spaced section tags.\n"
+           "QR share now has a huge button in the Settings hero whenever a track is playing: tap the Needle gear, see it immediately.\n"
+           "Floating Needle gear is now always visible, not just on the profile tab.\n"
+           "Discover section is first in Settings; Share song (QR) is the first entry.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
