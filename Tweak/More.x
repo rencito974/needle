@@ -293,16 +293,16 @@ static NSString *const NeedleGuiltyKey = @"GuiltyList";
     [self.view addSubview:sub];
 
     UIButton *add = [UIButton buttonWithType:UIButtonTypeSystem];
-    add.frame = CGRectMake(w - 100, 60, 80, 40);
+    add.frame = CGRectMake(24, 130, w - 48, 44);
     add.backgroundColor = NeedleCurrentColor();
     add.layer.cornerRadius = 14;
-    [add setTitle:@"+ Current" forState:UIControlStateNormal];
+    [add setTitle:@"Add currently playing" forState:UIControlStateNormal];
     [add setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    add.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightBold];
+    add.titleLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightBold];
     [add addTarget:self action:@selector(addCurrent) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:add];
 
-    self.table = [[UITableView alloc] initWithFrame:CGRectMake(0, 140, w, self.view.bounds.size.height - 140) style:UITableViewStylePlain];
+    self.table = [[UITableView alloc] initWithFrame:CGRectMake(0, 190, w, self.view.bounds.size.height - 190) style:UITableViewStylePlain];
     self.table.backgroundColor = [UIColor blackColor];
     self.table.separatorStyle = UITableViewCellSeparatorStyleNone;
     self.table.dataSource = self;

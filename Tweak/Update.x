@@ -4,14 +4,15 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.9.0";
+static NSString *const NeedleCurrentVersion = @"2.10.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Real app-icon changer (6 variants, swaps the home-screen icon for real).\n"
-           "Progress bar freeze fix and lockscreen-tap routing from last build.\n"
-           "QR share song, Bluetooth badge, Streaks, Guilty pleasures.";
+    return @"Settings redesigned: big 'Settings' header, dot-accent sections, rounded card groups.\n"
+           "Album-color wash in the background.\n"
+           "Fixed Guilty pleasures: + button no longer hides the close X.\n"
+           "Real app-icon changer still shipping from v2.9.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
