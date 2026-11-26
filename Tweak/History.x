@@ -71,11 +71,25 @@ void NeedleClearHistory(void) {
     @try { dur = [[track valueForKey:@"duration"] doubleValue] / 1000.0; } @catch (NSException *e) {}
 
     [[NSUserDefaults standardUserDefaults] setDouble:dur forKey:@"NeedleLastTrackDuration"];
+
+    NSString *uri = nil;
+    @try { uri = [track valueForKey:@"URI"]; } @catch (NSException *e) {}
+    if (![uri isKindOfClass:[NSString class]]) { @try { uri = [track valueForKey:@"uri"]; } @catch (NSException *e) {} }
+    if (![uri isKindOfClass:[NSString class]]) { @try { uri = [[track valueForKey:@"identifier"] description]; } @catch (NSException *e) {} }
+
+    if (!_needleCurrentTrackCache) _needleCurrentTrackCache = [NSMutableDictionary new];
+    _needleCurrentTrackCache[@"name"] = name ?: @"";
+    _needleCurrentTrackCache[@"artist"] = artist ?: @"";
+    _needleCurrentTrackCache[@"album"] = album ?: @"";
+    if ([uri isKindOfClass:[NSString class]]) _needleCurrentTrackCache[@"uri"] = uri;
+    else [_needleCurrentTrackCache removeObjectForKey:@"uri"];
+
     NeedleLogPlay(name ?: @"Unknown", artist ?: @"Unknown", album ?: @"", dur);
 }
 %end
 
 __weak id _needleSeekPlayer = nil;
+NSMutableDictionary *_needleCurrentTrackCache = nil;
 
 extern void NeedleOnPositionChanged(id player, NSTimeInterval pos);
 

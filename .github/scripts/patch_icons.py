@@ -1,7 +1,5 @@
 import os
 import sys
-import math
-import json
 import plistlib
 import zipfile
 import shutil
@@ -11,59 +9,56 @@ from PIL import Image, ImageDraw
 
 
 def draw_spotify_icon(size, bg_color, mark_color):
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    S = 4
+    big = size * S
+    img = Image.new("RGBA", (big, big), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    draw.rounded_rectangle((0, 0, size, size), radius=int(size * 0.235), fill=bg_color)
+    radius = int(big * 0.235)
+    draw.rounded_rectangle((0, 0, big, big), radius=radius, fill=bg_color)
 
-    cx = size / 2
-    cy = size * 0.72
-    radii = [size * 0.42, size * 0.30, size * 0.18]
-    widths = [size * 0.095, size * 0.085, size * 0.075]
-
-    for r, w in zip(radii, widths):
+    cx = big / 2
+    cy = big * 0.74
+    arcs = [
+        {"r": big * 0.36, "w": big * 0.090},
+        {"r": big * 0.25, "w": big * 0.075},
+        {"r": big * 0.145, "w": big * 0.060},
+    ]
+    for a in arcs:
+        r = a["r"]
+        w = a["w"]
         bbox = (cx - r, cy - r, cx + r, cy + r)
-        draw.arc(bbox, start=180, end=360, fill=mark_color, width=int(w))
+        draw.arc(bbox, start=200, end=340, fill=mark_color, width=int(w))
 
-    return img
+    out = img.resize((size, size), Image.LANCZOS)
+    return out
 
 
 ICONS = [
     {"key": "NeedleNoir", "bg": (18, 18, 18), "mark": (255, 255, 255)},
     {"key": "NeedleBlood", "bg": (216, 25, 38), "mark": (255, 255, 255)},
-    {"key": "NeedleSynth", "bg": (242, 25, 153), "mark": (0, 0, 0)},
-    {"key": "NeedleCream", "bg": (242, 224, 199), "mark": (0, 0, 0)},
+    {"key": "NeedleSynth", "bg": (242, 25, 153), "mark": (10, 10, 10)},
+    {"key": "NeedleCream", "bg": (242, 224, 199), "mark": (10, 10, 10)},
     {"key": "NeedleOcean", "bg": (12, 89, 191), "mark": (255, 255, 255)},
-    {"key": "NeedleGold", "bg": (242, 191, 64), "mark": (0, 0, 0)},
-]
-
-SIZES = [
-    (60, 2, "@2x"),
-    (60, 3, "@3x"),
-    (76, 1, ""),
-    (76, 2, "@2x"),
-    (83.5, 2, "@2x"),
-    (40, 2, "@2x"),
-    (40, 3, "@3x"),
-    (29, 2, "@2x"),
-    (29, 3, "@3x"),
+    {"key": "NeedleGold", "bg": (242, 191, 64), "mark": (10, 10, 10)},
 ]
 
 
-def generate_icon_set(key, bg, mark, out_dir):
-    files = []
-    for base, scale, suffix in SIZES:
-        px = int(round(base * scale))
-        img = draw_spotify_icon(px, bg, mark)
-        fname = f"{key}{int(base) if base == int(base) else base}x{int(base) if base == int(base) else base}{suffix}.png"
-        fname = f"{key}{suffix}.png" if base == 60 else fname
-        out_path = os.path.join(out_dir, fname)
-        img.save(out_path, "PNG")
-        files.append(fname)
-    main_60_2x = os.path.join(out_dir, f"{key}@2x.png")
-    main_60_3x = os.path.join(out_dir, f"{key}@3x.png")
-    draw_spotify_icon(120, bg, mark).save(main_60_2x, "PNG")
-    draw_spotify_icon(180, bg, mark).save(main_60_3x, "PNG")
-    return [key]
+def write_icon_files(icon, out_dir):
+    key = icon["key"]
+    bg = icon["bg"]
+    mark = icon["mark"]
+    sizes = [60, 76, 83.5, 40, 29, 20]
+    scales = [2, 3]
+    for s in sizes:
+        for sc in scales:
+            px = int(round(s * sc))
+            img = draw_spotify_icon(px, bg, mark)
+            if s == 60:
+                fname = f"{key}@{sc}x.png"
+            else:
+                base = int(s) if s == int(s) else s
+                fname = f"{key}{base}x{base}@{sc}x.png"
+            img.save(os.path.join(out_dir, fname), "PNG")
 
 
 def patch(ipa_path):
@@ -85,19 +80,20 @@ def patch(ipa_path):
         raise SystemExit("No .app inside Payload")
 
     for icon in ICONS:
-        generate_icon_set(icon["key"], icon["bg"], icon["mark"], str(app_dir))
+        write_icon_files(icon, str(app_dir))
 
     plist_path = app_dir / "Info.plist"
     with open(plist_path, "rb") as f:
         info = plistlib.load(f)
 
-    cfi = info.get("CFBundleIcons", {}) or {}
     alt = {}
     for icon in ICONS:
         alt[icon["key"]] = {
             "CFBundleIconFiles": [icon["key"]],
             "UIPrerenderedIcon": False,
         }
+
+    cfi = info.get("CFBundleIcons", {}) or {}
     cfi["CFBundleAlternateIcons"] = alt
     info["CFBundleIcons"] = cfi
 
@@ -118,7 +114,7 @@ def patch(ipa_path):
         cwd=work_dir,
     )
     shutil.move(str(out_ipa), ipa_path)
-    print(f"Patched {ipa_path}: added {len(ICONS)} alternate icons")
+    print(f"Patched {ipa_path}: {len(ICONS)} alternate icons")
 
 
 if __name__ == "__main__":

@@ -8,28 +8,15 @@ extern NSArray *NeedleReadHistory(void);
 extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 
+extern NSMutableDictionary *_needleCurrentTrackCache;
+
 static NSString *NeedleCurrentTrackURI(void) {
-    extern __weak id _needleSeekPlayer;
-    id player = _needleSeekPlayer;
-    if (!player) return nil;
-    NSString *uri = nil;
-    @try { uri = [[player valueForKey:@"currentTrack"] valueForKey:@"URI"]; } @catch (NSException *e) {}
-    if (![uri isKindOfClass:[NSString class]]) { @try { uri = [[player valueForKey:@"currentTrack"] valueForKey:@"uri"]; } @catch (NSException *e) {} }
-    return [uri isKindOfClass:[NSString class]] ? uri : nil;
+    return _needleCurrentTrackCache[@"uri"];
 }
 
 static NSDictionary *NeedleCurrentTrackInfo(void) {
-    extern __weak id _needleSeekPlayer;
-    id player = _needleSeekPlayer;
-    if (!player) return nil;
-    id tr = nil;
-    @try { tr = [player valueForKey:@"currentTrack"]; } @catch (NSException *e) {}
-    if (!tr) return nil;
-    NSString *name = nil, *artist = nil;
-    @try { name = [tr valueForKey:@"name"]; } @catch (NSException *e) {}
-    @try { artist = [tr valueForKey:@"artistName"]; } @catch (NSException *e) {}
-    if (!artist.length) { @try { artist = [tr valueForKey:@"artist"]; } @catch (NSException *e) {} }
-    return @{@"name": name ?: @"", @"artist": artist ?: @""};
+    if (!_needleCurrentTrackCache) return nil;
+    return [_needleCurrentTrackCache copy];
 }
 
 static UIImage *NeedleQRFor(NSString *payload) {
@@ -131,6 +118,66 @@ void NeedleOpenQRShare(void) {
     vc.modalPresentationStyle = UIModalPresentationFullScreen;
     [top presentViewController:vc animated:YES completion:nil];
 }
+
+@interface NeedleQRActivity : UIActivity
+@property (nonatomic, copy) NSString *shareURL;
+@end
+
+@implementation NeedleQRActivity
+- (NSString *)activityType { return @"com.needle.qrshare"; }
+- (NSString *)activityTitle { return @"QR code"; }
+- (UIImage *)activityImage {
+    return [UIImage systemImageNamed:@"qrcode" withConfiguration:
+        [UIImageSymbolConfiguration configurationWithPointSize:48 weight:UIImageSymbolWeightRegular]];
+}
++ (UIActivityCategory)activityCategory { return UIActivityCategoryShare; }
+- (BOOL)canPerformWithActivityItems:(NSArray *)items {
+    for (id it in items) {
+        if ([it isKindOfClass:[NSURL class]] || [it isKindOfClass:[NSString class]]) return YES;
+    }
+    return NO;
+}
+- (void)prepareWithActivityItems:(NSArray *)items {
+    for (id it in items) {
+        if ([it isKindOfClass:[NSURL class]]) { self.shareURL = [it absoluteString]; return; }
+        if ([it isKindOfClass:[NSString class]]) {
+            NSString *s = it;
+            if ([s hasPrefix:@"http"] || [s hasPrefix:@"spotify:"]) { self.shareURL = s; return; }
+        }
+    }
+}
+- (void)performActivity {
+    NSString *url = self.shareURL;
+    if ([url hasPrefix:@"spotify:track:"]) {
+        url = [NSString stringWithFormat:@"https://open.spotify.com/track/%@",
+            [url stringByReplacingOccurrencesOfString:@"spotify:track:" withString:@""]];
+    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIWindow *win = nil;
+        for (UIScene *s in [UIApplication sharedApplication].connectedScenes) {
+            if ([s isKindOfClass:[UIWindowScene class]] && s.activationState == UISceneActivationStateForegroundActive) {
+                for (UIWindow *w in ((UIWindowScene *)s).windows) if (w.isKeyWindow) { win = w; break; }
+                if (win) break;
+            }
+        }
+        UIViewController *top = win.rootViewController;
+        while (top.presentedViewController) top = top.presentedViewController;
+        NeedleQRShareViewController *vc = [NeedleQRShareViewController new];
+        vc.modalPresentationStyle = UIModalPresentationFullScreen;
+        [top presentViewController:vc animated:YES completion:nil];
+        [self activityDidFinish:YES];
+    });
+}
+@end
+
+%hook UIActivityViewController
+- (instancetype)initWithActivityItems:(NSArray *)items applicationActivities:(NSArray *)apps {
+    NeedleQRActivity *qr = [[NeedleQRActivity alloc] init];
+    NSMutableArray *all = [apps mutableCopy] ?: [NSMutableArray new];
+    [all insertObject:qr atIndex:0];
+    return %orig(items, all);
+}
+%end
 
 @interface NeedleStreakViewController : UIViewController
 @end
