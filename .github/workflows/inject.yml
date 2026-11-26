@@ -55,7 +55,11 @@ jobs:
         run: |
           cd work
           which cyan || pip3 show cyan | grep Location
-          cyan -i spotify.ipa -o Needle-Spotify.ipa -f Needle-latest.deb -u
+          NEEDLE_VER=$(date -u +%Y.%m.%d.%H%M)
+          cyan -i spotify.ipa -o Needle-Spotify.ipa -f Needle-latest.deb -u \
+            -b com.needle.spotify \
+            -n "Spotify" \
+            -v "$NEEDLE_VER"
           ls -la Needle-Spotify.ipa
 
       - name: Publish Needle-Spotify.ipa

@@ -226,11 +226,40 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
         [NeedleRow sw:@"Album colored UI" key:@"AlbumColorUI" def:YES symbol:@"paintpalette"],
         [NeedleRow sw:@"Artwork breathing" key:@"ArtworkBreathing" def:YES symbol:@"waveform.path"],
         [NeedleRow sw:@"Accent colors on controls" key:@"AccentColors" def:YES symbol:@"circle.hexagongrid.fill"],
-        [NeedleRow sw:@"Apple Music lockscreen art" key:@"BigLockscreenArt" def:YES symbol:@"lock.iphone"],
+        [NeedleRow sw:@"Lockscreen Ken Burns" key:@"LockMotion" def:YES symbol:@"lock.iphone"],
+        [NeedleRow sw:@"Mini player redesign" key:@"MiniPlayerRedesign" def:YES symbol:@"rectangle.bottomthird.inset.filled"],
     ];
-    look.footer = @"Theme the Now Playing screen, mini player, play button and progress bar with the current album's palette.";
+    look.footer = @"Theme and animate the Now Playing surfaces with the current album's palette.";
 
-    self.sections = @[playback, sleep, look];
+    NeedleSection *content = [NeedleSection new];
+    content.title = @"Content";
+    content.rows = @[
+        [NeedleRow sw:@"Block all ads" key:@"BlockAds" def:YES symbol:@"nosign"],
+        [NeedleRow sw:@"Skip short interludes" key:@"SkipInterludes" def:NO symbol:@"forward.end.alt"],
+        [NeedleRow sw:@"Skip explicit tracks" key:@"SkipExplicit" def:NO symbol:@"e.square"],
+        [NeedleRow sw:@"Tap lyric → full view" key:@"LyricsTapOpensFull" def:YES symbol:@"text.quote"],
+    ];
+    content.footer = @"Interludes catches tracks under 35 s and anything named intro, outro, interlude or skit.";
+
+    NeedleSection *you = [NeedleSection new];
+    you.title = @"You";
+    you.rows = @[
+        [NeedleRow button:@"Live Wrapped" action:^{
+            extern void NeedleOpenWrapped(void);
+            NeedleOpenWrapped();
+        } symbol:@"chart.bar.fill"],
+        [NeedleRow button:@"Change app icon" action:^{
+            extern void NeedleOpenIconPicker(void);
+            NeedleOpenIconPicker();
+        } symbol:@"app.fill"],
+        [NeedleRow button:@"What's new" action:^{
+            extern void NeedleShowChangelogNow(void);
+            NeedleShowChangelogNow();
+        } symbol:@"sparkles"],
+    ];
+    you.footer = @"Wrapped runs on local listening history, logged since you installed Needle.";
+
+    self.sections = @[playback, sleep, look, content, you];
 }
 
 - (void)alert:(NSString *)title message:(NSString *)msg {

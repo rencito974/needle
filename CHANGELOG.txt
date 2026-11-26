@@ -1,0 +1,22 @@
+2.0.0
+Mini-player redesign with waveform scrubber.
+Lockscreen art now animates with a slow Ken Burns pan.
+Live Wrapped: your top tracks and artists this week, month, all-time.
+Infinite listening history.
+Ad blocker: audio ads, home-feed sponsorships, podcast promos.
+Full-screen lyrics overlay when you tap the top line.
+Custom app icon picker.
+Auto-skip short interludes.
+In-place updates: no more deleting Spotify before every build.
+Changelog right here on launch.
+
+1.1.0
+Floating liquid-glass gear button for Needle settings.
+Full settings redesign.
+
+1.0.0
+Real Fisher Yates shuffle.
+Sleep timer.
+Album-colored Now Playing.
+Artwork breathing animation.
+Accent-tinted controls.

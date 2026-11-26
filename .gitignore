@@ -6,3 +6,5 @@ out/
 Tweak/packages/
 Tweak/.theos/
 Tweak/obj/
+Needle-Spotify.ipa
+*.ipa
