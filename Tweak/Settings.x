@@ -169,9 +169,12 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
         [NeedleRow sw:@"Fisher Yates shuffle" key:@"RealShuffle" def:YES symbol:@"shuffle"],
         [NeedleRow sw:@"Shuffle lock (no auto-off)" key:@"ShuffleLock" def:NO symbol:@"lock.shield"],
         [NeedleRow sw:@"Enhanced crossfade (20 s)" key:@"CrossfadeMax" def:NO symbol:@"waveform.path.ecg"],
+        [NeedleRow sw:@"Gapless within album" key:@"GaplessAlbum" def:YES symbol:@"forward.end"],
+        [NeedleRow sw:@"Force 320 kbps" key:@"HighBitrate" def:NO symbol:@"4k.tv"],
         [NeedleRow sw:@"Volume boost (1.5×)" key:@"VolumeBoost" def:NO symbol:@"speaker.wave.3.fill"],
+        [NeedleRow sw:@"Free-tier unlocks" key:@"FreeUnlocks" def:NO symbol:@"crown.fill"],
     ];
-    playback.footer = @"Shuffle lock stops Spotify silently turning shuffle back off. Volume boost adds extra gain on the mixer; strong tracks may clip.";
+    playback.footer = @"Free-tier unlocks flip Spotify client flags to pretend you're premium (unlimited skips, on-demand play). Server may still refuse; use at your own risk.";
 
     extern void NeedleStartSleepTimer(NSInteger minutes);
     extern void NeedleCancelSleepTimer(void);
@@ -217,11 +220,42 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     content.title = @"Content";
     content.rows = @[
         [NeedleRow sw:@"Block all ads" key:@"BlockAds" def:YES symbol:@"nosign"],
+        [NeedleRow sw:@"DNS-level analytics block" key:@"DNSBlock" def:YES symbol:@"shield.lefthalf.filled"],
         [NeedleRow sw:@"Skip short interludes" key:@"SkipInterludes" def:NO symbol:@"forward.end.alt"],
         [NeedleRow sw:@"Skip explicit tracks" key:@"SkipExplicit" def:NO symbol:@"e.square"],
         [NeedleRow sw:@"Tap lyric → full view" key:@"LyricsTapOpensFull" def:YES symbol:@"text.quote"],
     ];
-    content.footer = @"Interludes catches tracks under 35 s and anything named intro, outro, interlude or skit.";
+    content.footer = @"DNS block drops requests to pixel.spotify.com, adeventtracker, analytics.scdn.co and known ad hosts.";
+
+    NeedleSection *discover = [NeedleSection new];
+    discover.title = @"Discover";
+    discover.rows = @[
+        [NeedleRow button:@"Similar songs" action:^{
+            extern void NeedleOpenSimilarSongs(void);
+            NeedleOpenSimilarSongs();
+        } symbol:@"sparkles.rectangle.stack"],
+        [NeedleRow button:@"Mood jumper" action:^{
+            extern void NeedleOpenMoodJumper(void);
+            NeedleOpenMoodJumper();
+        } symbol:@"face.smiling"],
+        [NeedleRow button:@"Playlist mixer" action:^{
+            extern void NeedleOpenMixer(void);
+            NeedleOpenMixer();
+        } symbol:@"shuffle.circle"],
+        [NeedleRow button:@"Session mosaic" action:^{
+            extern void NeedleOpenSessionMosaic(void);
+            NeedleOpenSessionMosaic();
+        } symbol:@"square.grid.3x3.fill"],
+        [NeedleRow button:@"Recognize song" action:^{
+            extern void NeedleOpenRecognize(void);
+            NeedleOpenRecognize();
+        } symbol:@"waveform.badge.magnifyingglass"],
+        [NeedleRow button:@"Local music" action:^{
+            extern void NeedleOpenLocalPlayer(void);
+            NeedleOpenLocalPlayer();
+        } symbol:@"folder.fill"],
+    ];
+    discover.footer = @"Similar / mood / mixer / session all read your local listening history. Twin playback was requested but iOS can't route one app's audio to two outputs, so it is not built.";
 
     NeedleSection *you = [NeedleSection new];
     you.title = @"You";
@@ -245,7 +279,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     ];
     you.footer = @"Themes override the album-extracted palette with a fixed one.";
 
-    self.sections = @[playback, sleep, look, content, you];
+    self.sections = @[playback, sleep, look, content, discover, you];
 }
 
 - (void)alert:(NSString *)title message:(NSString *)msg {

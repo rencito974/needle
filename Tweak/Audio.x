@@ -27,6 +27,36 @@ extern BOOL NeedlePrefBool(NSString *key, BOOL def);
             return 20;
         }
     }
+    if (NeedlePrefBool(@"HighBitrate", NO)) {
+        if ([key isEqualToString:@"stream-quality"] ||
+            [key isEqualToString:@"streaming-quality"] ||
+            [key isEqualToString:@"audio-quality"] ||
+            [key isEqualToString:@"playback-bitrate"]) {
+            return 4;
+        }
+    }
+    return %orig;
+}
+- (id)objectForKey:(NSString *)key {
+    if (NeedlePrefBool(@"HighBitrate", NO)) {
+        if ([key isEqualToString:@"stream-quality"] ||
+            [key isEqualToString:@"streaming-quality"] ||
+            [key isEqualToString:@"audio-quality"]) {
+            return @"VERY_HIGH";
+        }
+    }
+    return %orig;
+}
+%end
+
+@interface SPTCrossfadeImpl : NSObject
+@end
+@interface SPTGaplessController : NSObject
+@end
+
+%hook SPTGaplessController
+- (BOOL)isGaplessEnabled {
+    if (NeedlePrefBool(@"GaplessAlbum", YES)) return YES;
     return %orig;
 }
 %end

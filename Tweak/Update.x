@@ -4,19 +4,19 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.5.0";
+static NSString *const NeedleCurrentVersion = @"2.6.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Icon picker now uses the real Spotify logo (recolored per variant).\n"
-           "Settings redesigned flat and minimal, like iOS native.\n"
-           "Removed an ad-blocker override that was confusing the lockscreen progress timer.\n"
-           "Shuffle lock, volume boost (1.5x), enhanced crossfade (20 s).\n"
-           "Theme store: pick a fixed palette.\n"
-           "Sleep timer fades volume over the last 60 s.\n"
-           "Share your Wrapped as an image.\n"
-           "Tap a lyric line to seek.";
+    return @"DNS-level analytics block (pixel.spotify.com and friends).\n"
+           "Force 320 kbps streaming on free tier.\n"
+           "Gapless within the same album.\n"
+           "Free-tier unlocks (toggle in Playback) flip Spotify's 'is premium' client flags.\n"
+           "Mood jumper, Similar songs, Playlist mixer, Session mosaic.\n"
+           "Recognize song (Shazam-based, needs mic).\n"
+           "Local music player for your own files.\n"
+           "Twin playback cannot be built: iOS can't split audio across outputs.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
