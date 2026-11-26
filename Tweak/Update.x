@@ -4,17 +4,15 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.7.0";
+static NSString *const NeedleCurrentVersion = @"2.7.1";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Icon picker previews fixed (clean monochrome tint, no ghost squares).\n"
-           "No more Not Supported alert; selection is preview-only until cyan bundles the PNGs.\n"
-           "DNS analytics block, 320 kbps, gapless, free-tier unlocks.\n"
-           "Mood jumper, Similar songs, Playlist mixer, Session mosaic.\n"
-           "Recognize song (Shazam-based) and local music player.\n"
-           "Twin playback cannot be built: iOS can't split audio across outputs.";
+    return @"Crash on launch fixed (infinite recursion in the 320 kbps hook).\n"
+           "DNS blocker rewritten to cancel the task instead of swapping args.\n"
+           "Icon picker tint and preview behaviour kept from 2.7.\n"
+           "All other 2.6 features intact: Mood, Similar, Mixer, Mosaic, Recognize, Local.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {

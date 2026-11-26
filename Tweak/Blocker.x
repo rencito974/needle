@@ -28,25 +28,17 @@ static BOOL NeedleShouldBlockURL(NSURL *url) {
 
 %hook NSURLSession
 - (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)req completionHandler:(void (^)(NSData *, NSURLResponse *, NSError *))h {
-    if (NeedleShouldBlockURL(req.URL)) {
-        if (h) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                h(nil, nil, [NSError errorWithDomain:@"Needle" code:-1 userInfo:nil]);
-            });
-        }
-        return %orig([NSURLRequest requestWithURL:[NSURL URLWithString:@"about:blank"]], nil);
+    NSURLSessionDataTask *task = %orig;
+    if (task && NeedleShouldBlockURL(req.URL)) {
+        [task cancel];
     }
-    return %orig;
+    return task;
 }
 - (NSURLSessionDataTask *)dataTaskWithURL:(NSURL *)url completionHandler:(void (^)(NSData *, NSURLResponse *, NSError *))h {
-    if (NeedleShouldBlockURL(url)) {
-        if (h) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                h(nil, nil, [NSError errorWithDomain:@"Needle" code:-1 userInfo:nil]);
-            });
-        }
-        return %orig([NSURL URLWithString:@"about:blank"], nil);
+    NSURLSessionDataTask *task = %orig;
+    if (task && NeedleShouldBlockURL(url)) {
+        [task cancel];
     }
-    return %orig;
+    return task;
 }
 %end

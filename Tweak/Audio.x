@@ -37,16 +37,6 @@ extern BOOL NeedlePrefBool(NSString *key, BOOL def);
     }
     return %orig;
 }
-- (id)objectForKey:(NSString *)key {
-    if (NeedlePrefBool(@"HighBitrate", NO)) {
-        if ([key isEqualToString:@"stream-quality"] ||
-            [key isEqualToString:@"streaming-quality"] ||
-            [key isEqualToString:@"audio-quality"]) {
-            return @"VERY_HIGH";
-        }
-    }
-    return %orig;
-}
 %end
 
 @interface SPTCrossfadeImpl : NSObject
