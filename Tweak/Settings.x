@@ -328,6 +328,15 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     }
 }
 
++ (void)_needleTripleTap:(UITapGestureRecognizer *)g {
+    if (g.state == UIGestureRecognizerStateRecognized) {
+        UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleHeavy];
+        [fb impactOccurred];
+        extern void NeedleOpenSettings(void);
+        NeedleOpenSettings();
+    }
+}
+
 @end
 
 static UIViewController *_NeedleTopVC(void) {
@@ -356,18 +365,50 @@ void NeedleOpenSettings(void) {
 @interface SPTNowPlayingBar : UIView
 @end
 
-%hook SPTNowPlayingBar
-- (void)didMoveToWindow {
-    %orig;
-    if (!self.window) return;
+static void _NeedleAttachLongPress(UIView *view) {
+    if (!view) return;
     static char _lpKey;
-    if (objc_getAssociatedObject(self, &_lpKey)) return;
+    if (objc_getAssociatedObject(view, &_lpKey)) return;
     UILongPressGestureRecognizer *lp = [[UILongPressGestureRecognizer alloc]
         initWithTarget:[NeedleSettingsViewController class]
         action:@selector(_needleLongPress:)];
     lp.minimumPressDuration = 0.6;
-    [self addGestureRecognizer:lp];
-    objc_setAssociatedObject(self, &_lpKey, lp, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    lp.cancelsTouchesInView = NO;
+    [view addGestureRecognizer:lp];
+    objc_setAssociatedObject(view, &_lpKey, lp, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+%hook SPTNowPlayingBar
+- (void)didMoveToWindow {
+    %orig;
+    if (!self.window) return;
+    _NeedleAttachLongPress(self);
+}
+%end
+
+%hook UIWindow
+- (void)motionEnded:(UIEventSubtype)motion withEvent:(UIEvent *)event {
+    %orig;
+    if (motion == UIEventSubtypeMotionShake) {
+        UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleHeavy];
+        [fb impactOccurred];
+        extern void NeedleOpenSettings(void);
+        NeedleOpenSettings();
+    }
+}
+
+- (void)didAddSubview:(UIView *)sub {
+    %orig;
+    static char _rootTapKey;
+    if (objc_getAssociatedObject(self, &_rootTapKey)) return;
+    objc_setAssociatedObject(self, &_rootTapKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]
+        initWithTarget:[NeedleSettingsViewController class]
+        action:@selector(_needleTripleTap:)];
+    tap.numberOfTapsRequired = 3;
+    tap.numberOfTouchesRequired = 2;
+    tap.cancelsTouchesInView = NO;
+    [self addGestureRecognizer:tap];
 }
 %end
 
@@ -380,7 +421,7 @@ void NeedleOpenSettings(void) {
             if (!top) return;
             UIAlertController *a = [UIAlertController
                 alertControllerWithTitle:@"Needle installed"
-                message:@"Long press the Now Playing bar at the bottom to open settings."
+                message:@"Open settings by: long-pressing the mini player, shaking the phone, or three-finger-triple-tap anywhere."
                 preferredStyle:UIAlertControllerStyleAlert];
             [a addAction:[UIAlertAction actionWithTitle:@"Got it" style:UIAlertActionStyleDefault handler:^(UIAlertAction *_){
                 NeedlePrefSetBool(@"HasSeenWelcome", YES);
