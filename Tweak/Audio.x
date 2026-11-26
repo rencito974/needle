@@ -59,7 +59,7 @@ extern float NeedlePrefFloat(NSString *key, float def);
         float boost = NeedlePrefFloat(@"VolumeBoostAmount", 1.0);
         if (boost < 0.5) boost = 0.5;
         if (boost > 4.0) boost = 4.0;
-        if (fabsf(boost - 1.0) > 0.01) {
+        if (fabsf(boost - 1.0f) > 0.01f) {
             self.mainMixerNode.outputVolume = boost;
         }
     }
