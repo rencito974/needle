@@ -77,7 +77,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.13";
+    return @"2.14";
 }
 
 @implementation NeedleSettingsViewController
@@ -122,42 +122,121 @@ static NSString *_NeedleVersionTag(void) {
 }
 
 - (NeedleHeroView *)buildHero:(CGFloat)w {
+    extern NSArray *NeedleReadHistory(void);
+
     BOOL playing = (_needleCurrentTrackCache[@"name"] != nil) && [_needleCurrentTrackCache[@"name"] length] > 0;
-    CGFloat heroH = playing ? 242 : 176;
+    CGFloat heroH = playing ? 312 : 222;
     NeedleHeroView *hero = [[NeedleHeroView alloc] initWithFrame:CGRectMake(0, 0, w, heroH)];
     hero.backgroundColor = [UIColor clearColor];
+    hero.clipsToBounds = YES;
 
-    UIButton *close = [UIButton buttonWithType:UIButtonTypeSystem];
+    UIColor *accent = NeedleCurrentColor();
+
+    CGPoint vCenter = CGPointMake(w + 28, -14);
+    for (CGFloat r = 44; r <= 158; r += 22) {
+        CAShapeLayer *circle = [CAShapeLayer layer];
+        UIBezierPath *path = [UIBezierPath bezierPathWithArcCenter:vCenter radius:r startAngle:0 endAngle:2 * M_PI clockwise:YES];
+        circle.path = path.CGPath;
+        circle.strokeColor = [[accent colorWithAlphaComponent:0.28] CGColor];
+        circle.fillColor = [UIColor clearColor].CGColor;
+        circle.lineWidth = 1.2;
+        [hero.layer addSublayer:circle];
+    }
+    CAShapeLayer *vinylCore = [CAShapeLayer layer];
+    UIBezierPath *coreP = [UIBezierPath bezierPathWithArcCenter:vCenter radius:9 startAngle:0 endAngle:2 * M_PI clockwise:YES];
+    vinylCore.path = coreP.CGPath;
+    vinylCore.fillColor = [[accent colorWithAlphaComponent:0.75] CGColor];
+    [hero.layer addSublayer:vinylCore];
+
+    CAShapeLayer *needle = [CAShapeLayer layer];
+    UIBezierPath *npath = [UIBezierPath bezierPath];
+    [npath moveToPoint:CGPointMake(w - 56, -22)];
+    [npath addLineToPoint:CGPointMake(w + 30, 82)];
+    needle.path = npath.CGPath;
+    needle.strokeColor = [[accent colorWithAlphaComponent:0.55] CGColor];
+    needle.lineWidth = 2.5;
+    needle.lineCap = kCALineCapRound;
+    [hero.layer addSublayer:needle];
+
+    UIButton *close = [UIButton buttonWithType:UIButtonTypeCustom];
     close.frame = CGRectMake(w - 60, 60, 42, 42);
     close.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
-    UIVisualEffectView *blur = [[UIVisualEffectView alloc] initWithEffect:
-        [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterialDark]];
-    blur.frame = close.bounds;
-    blur.layer.cornerRadius = 21;
-    blur.layer.masksToBounds = YES;
-    blur.userInteractionEnabled = NO;
-    [close insertSubview:blur atIndex:0];
+    close.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.6];
+    close.layer.cornerRadius = 21;
+    close.layer.borderWidth = 0.5;
+    close.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.22].CGColor;
+    close.layer.shadowColor = [UIColor blackColor].CGColor;
+    close.layer.shadowOffset = CGSizeMake(0, 2);
+    close.layer.shadowRadius = 8;
+    close.layer.shadowOpacity = 0.35;
     [close setImage:[UIImage systemImageNamed:@"xmark"
-        withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightBold]]
+        withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:15 weight:UIImageSymbolWeightBold]]
         forState:UIControlStateNormal];
     close.tintColor = [UIColor whiteColor];
+    close.imageView.contentMode = UIViewContentModeScaleAspectFit;
     [close addTarget:self action:@selector(dismissSelf) forControlEvents:UIControlEventTouchUpInside];
     [hero addSubview:close];
 
-    UILabel *wordmark = [[UILabel alloc] initWithFrame:CGRectMake(22, 60, w - 90, 46)];
+    UILabel *wordmark = [[UILabel alloc] initWithFrame:CGRectMake(22, 54, w - 90, 46)];
     wordmark.text = @"Needle";
     wordmark.textColor = [UIColor whiteColor];
-    wordmark.font = [UIFont systemFontOfSize:42 weight:UIFontWeightBlack];
+    wordmark.font = [UIFont systemFontOfSize:40 weight:UIFontWeightBlack];
     [hero addSubview:wordmark];
 
-    UILabel *sub = [[UILabel alloc] initWithFrame:CGRectMake(22, 108, w - 44, 18)];
+    UILabel *sub = [[UILabel alloc] initWithFrame:CGRectMake(22, 100, w - 44, 16)];
     sub.text = [NSString stringWithFormat:@"v%@", _NeedleVersionTag()];
-    sub.textColor = [UIColor colorWithWhite:1 alpha:0.42];
-    sub.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
+    sub.textColor = [UIColor colorWithWhite:1 alpha:0.4];
+    sub.font = [UIFont systemFontOfSize:12 weight:UIFontWeightSemibold];
     [hero addSubview:sub];
 
+    NSArray *hist = NeedleReadHistory();
+    NSCalendar *cal = [NSCalendar currentCalendar];
+    NSInteger today = [cal ordinalityOfUnit:NSCalendarUnitDay inUnit:NSCalendarUnitEra forDate:[NSDate date]];
+    NSInteger songsToday = 0;
+    NSTimeInterval minutesToday = 0;
+    NSMutableSet *activeDays = [NSMutableSet new];
+    for (NSDictionary *e in hist) {
+        NSDate *d = [NSDate dateWithTimeIntervalSince1970:[e[@"when"] doubleValue]];
+        NSInteger day = [cal ordinalityOfUnit:NSCalendarUnitDay inUnit:NSCalendarUnitEra forDate:d];
+        [activeDays addObject:@(day)];
+        if (day == today) {
+            songsToday++;
+            minutesToday += [e[@"duration"] doubleValue];
+        }
+    }
+    NSInteger streak = 0;
+    for (NSInteger d = today; d > 0; d--) {
+        if ([activeDays containsObject:@(d)]) streak++;
+        else break;
+    }
+    NSInteger mins = (NSInteger)round(minutesToday / 60.0);
+
+    NSArray *kpis = @[
+        @{@"n": [NSString stringWithFormat:@"%ld", (long)songsToday], @"l": @"SONGS TODAY"},
+        @{@"n": [NSString stringWithFormat:@"%ld", (long)streak], @"l": @"DAY STREAK"},
+        @{@"n": [NSString stringWithFormat:@"%ld", (long)mins], @"l": @"MINUTES"},
+    ];
+    CGFloat col = (w - 44) / 3.0;
+    for (NSInteger i = 0; i < kpis.count; i++) {
+        NSDictionary *k = kpis[i];
+        CGFloat x = 22 + i * col;
+        UILabel *num = [[UILabel alloc] initWithFrame:CGRectMake(x, 138, col - 8, 40)];
+        num.text = k[@"n"];
+        num.textColor = [UIColor whiteColor];
+        num.font = [UIFont systemFontOfSize:32 weight:UIFontWeightBlack];
+        [hero addSubview:num];
+
+        UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(x, 180, col - 8, 14)];
+        NSMutableAttributedString *a = [[NSMutableAttributedString alloc] initWithString:k[@"l"]];
+        [a addAttribute:NSKernAttributeName value:@1.4 range:NSMakeRange(0, a.length)];
+        [a addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:9 weight:UIFontWeightHeavy] range:NSMakeRange(0, a.length)];
+        [a addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithWhite:1 alpha:0.5] range:NSMakeRange(0, a.length)];
+        lbl.attributedText = a;
+        [hero addSubview:lbl];
+    }
+
     if (playing) {
-        UIView *strip = [[UIView alloc] initWithFrame:CGRectMake(22, 152, w - 44, 72)];
+        UIView *strip = [[UIView alloc] initWithFrame:CGRectMake(22, 220, w - 44, 76)];
         strip.backgroundColor = [NeedleCurrentColor() colorWithAlphaComponent:0.14];
         strip.layer.cornerRadius = 20;
         strip.layer.borderWidth = 0.5;
@@ -176,20 +255,20 @@ static NSString *_NeedleVersionTag(void) {
         pulse.repeatCount = HUGE_VALF;
         [dot.layer addAnimation:pulse forKey:@"pulse"];
 
-        UILabel *trackLbl = [[UILabel alloc] initWithFrame:CGRectMake(36, 10, strip.frame.size.width - 86, 24)];
+        UILabel *trackLbl = [[UILabel alloc] initWithFrame:CGRectMake(36, 12, strip.frame.size.width - 86, 24)];
         trackLbl.text = _needleCurrentTrackCache[@"name"] ?: @"";
         trackLbl.textColor = [UIColor whiteColor];
         trackLbl.font = [UIFont systemFontOfSize:16 weight:UIFontWeightBold];
         [strip addSubview:trackLbl];
 
-        UILabel *artistLbl = [[UILabel alloc] initWithFrame:CGRectMake(36, 34, strip.frame.size.width - 86, 20)];
+        UILabel *artistLbl = [[UILabel alloc] initWithFrame:CGRectMake(36, 36, strip.frame.size.width - 86, 20)];
         artistLbl.text = _needleCurrentTrackCache[@"artist"] ?: @"";
         artistLbl.textColor = [UIColor colorWithWhite:1 alpha:0.6];
         artistLbl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
         [strip addSubview:artistLbl];
 
         UIButton *qr = [UIButton buttonWithType:UIButtonTypeSystem];
-        qr.frame = CGRectMake(strip.frame.size.width - 54, 14, 44, 44);
+        qr.frame = CGRectMake(strip.frame.size.width - 56, 16, 44, 44);
         qr.backgroundColor = NeedleCurrentColor();
         qr.layer.cornerRadius = 14;
         [qr setImage:[UIImage systemImageNamed:@"qrcode"
@@ -585,6 +664,13 @@ static NSString *_NeedleVersionTag(void) {
     NeedleOpenSettings();
 }
 
++ (void)_needleQRFloatTap:(UITapGestureRecognizer *)g {
+    UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+    [fb impactOccurred];
+    extern void NeedleOpenQRShare(void);
+    NeedleOpenQRShare();
+}
+
 + (void)_needleGearPan:(UIPanGestureRecognizer *)g {
     UIView *host = g.view;
     if (!host || !host.superview) return;
@@ -650,21 +736,28 @@ static void _NeedleAttachLongPress(UIView *view) {
 %end
 
 static UIView *_needleFloatingHost = nil;
+static UIView *_needleFloatingQR = nil;
 static BOOL _needleFloatingHidden = NO;
+
+static BOOL _NeedleTrackIsCached(void) {
+    return (_needleCurrentTrackCache[@"name"] != nil) && [_needleCurrentTrackCache[@"name"] length] > 0;
+}
 
 void NeedleHideFloatingButton(void) {
     _needleFloatingHidden = YES;
     if (_needleFloatingHost) _needleFloatingHost.hidden = YES;
+    if (_needleFloatingQR) _needleFloatingQR.hidden = YES;
 }
 
 void NeedleShowFloatingButton(void) {
     _needleFloatingHidden = NO;
     if (_needleFloatingHost) _needleFloatingHost.hidden = NO;
+    if (_needleFloatingQR) _needleFloatingQR.hidden = !_NeedleTrackIsCached();
 }
 
 void _NeedleSyncGearVisibility(void) {
-    if (!_needleFloatingHost) return;
-    _needleFloatingHost.hidden = _needleFloatingHidden;
+    if (_needleFloatingHost) _needleFloatingHost.hidden = _needleFloatingHidden;
+    if (_needleFloatingQR) _needleFloatingQR.hidden = _needleFloatingHidden || !_NeedleTrackIsCached();
 }
 
 static UIView *_NeedleBuildButton(CGRect frame) {
@@ -753,6 +846,70 @@ static void NeedleInstallFloatingButton(void) {
     [_needleFloatingHost.layer addAnimation:pulse forKey:@"spawn"];
 }
 
+static UIView *_NeedleBuildQRFloat(CGRect frame) {
+    UIView *host = [[UIView alloc] initWithFrame:frame];
+    host.backgroundColor = [UIColor clearColor];
+    host.layer.shadowColor = [UIColor blackColor].CGColor;
+    host.layer.shadowOffset = CGSizeMake(0, 4);
+    host.layer.shadowRadius = 10;
+    host.layer.shadowOpacity = 0.4;
+
+    UIView *bg = [[UIView alloc] initWithFrame:host.bounds];
+    bg.backgroundColor = NeedleCurrentColor();
+    bg.layer.cornerRadius = frame.size.width / 2;
+    bg.layer.borderWidth = 0.5;
+    bg.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.32].CGColor;
+    bg.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [host addSubview:bg];
+
+    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:19 weight:UIImageSymbolWeightBold];
+    UIImage *icon = [UIImage systemImageNamed:@"qrcode" withConfiguration:cfg];
+    UIImageView *iv = [[UIImageView alloc] initWithImage:icon];
+    iv.tintColor = [UIColor whiteColor];
+    iv.contentMode = UIViewContentModeCenter;
+    iv.frame = host.bounds;
+    iv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [host addSubview:iv];
+
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]
+        initWithTarget:[NeedleSettingsViewController class]
+        action:@selector(_needleQRFloatTap:)];
+    [host addGestureRecognizer:tap];
+    return host;
+}
+
+static void NeedleInstallFloatingQR(void) {
+    UIWindow *target = nil;
+    NSArray *scenes = [[UIApplication sharedApplication].connectedScenes allObjects];
+    for (UIScene *s in scenes) {
+        if ([s isKindOfClass:[UIWindowScene class]] && s.activationState == UISceneActivationStateForegroundActive) {
+            UIWindowScene *ws = (UIWindowScene *)s;
+            for (UIWindow *w in ws.windows) {
+                if (w.isKeyWindow) { target = w; break; }
+            }
+            if (!target && ws.windows.count) target = ws.windows.firstObject;
+            if (target) break;
+        }
+    }
+    if (!target) return;
+
+    BOOL show = _NeedleTrackIsCached() && !_needleFloatingHidden;
+
+    if (_needleFloatingQR && _needleFloatingQR.superview == target) {
+        _needleFloatingQR.hidden = !show;
+        [target bringSubviewToFront:_needleFloatingQR];
+        return;
+    }
+    if (_needleFloatingQR) [_needleFloatingQR removeFromSuperview];
+
+    CGFloat btnSize = 42;
+    CGRect frame = CGRectMake(target.bounds.size.width - btnSize - 16 - btnSize - 10, 68, btnSize, btnSize);
+    _needleFloatingQR = _NeedleBuildQRFloat(frame);
+    _needleFloatingQR.hidden = !show;
+    [target addSubview:_needleFloatingQR];
+    [target bringSubviewToFront:_needleFloatingQR];
+}
+
 %hook UIWindow
 - (void)layoutSubviews {
     %orig;
@@ -761,6 +918,11 @@ static void NeedleInstallFloatingButton(void) {
             NeedleInstallFloatingButton();
         } else {
             [self bringSubviewToFront:_needleFloatingHost];
+        }
+        if (!_needleFloatingQR || _needleFloatingQR.superview != self) {
+            NeedleInstallFloatingQR();
+        } else {
+            [self bringSubviewToFront:_needleFloatingQR];
         }
     }
 }
@@ -772,6 +934,7 @@ static void NeedleStartInstallWatchdog(void) {
     if (_needleInstallTimer) return;
     _needleInstallTimer = [NSTimer scheduledTimerWithTimeInterval:1.5 repeats:YES block:^(NSTimer *t) {
         NeedleInstallFloatingButton();
+        NeedleInstallFloatingQR();
     }];
 }
 
@@ -780,6 +943,7 @@ static void NeedleStartInstallWatchdog(void) {
     %orig;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NeedleInstallFloatingButton();
+        NeedleInstallFloatingQR();
         _NeedleSyncGearVisibility();
     });
 }
@@ -802,6 +966,7 @@ static void NeedleStartInstallWatchdog(void) {
         usingBlock:^(NSNotification *n) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 NeedleInstallFloatingButton();
+                NeedleInstallFloatingQR();
                 NeedleStartInstallWatchdog();
             });
         }];
@@ -811,11 +976,13 @@ static void NeedleStartInstallWatchdog(void) {
         usingBlock:^(NSNotification *n) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 NeedleInstallFloatingButton();
+                NeedleInstallFloatingQR();
                 NeedleStartInstallWatchdog();
             });
         }];
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NeedleInstallFloatingButton();
+        NeedleInstallFloatingQR();
         NeedleStartInstallWatchdog();
     });
 }

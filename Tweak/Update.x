@@ -4,15 +4,15 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.13.0";
+static NSString *const NeedleCurrentVersion = @"2.14.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Settings fully redesigned: flat list, no cards, no grey footer text, wordmark hero, letter spaced section tags.\n"
-           "QR share now has a huge button in the Settings hero whenever a track is playing: tap the Needle gear, see it immediately.\n"
-           "Floating Needle gear is now always visible, not just on the profile tab.\n"
-           "Discover section is first in Settings; Share song (QR) is the first entry.";
+    return @"Settings hero redesigned again: three live KPIs (songs today, day streak, minutes) plus a vinyl + needle motif in the corner.\n"
+           "Close X now renders properly (no more empty circle).\n"
+           "QR gets its own always-on floating button beside the gear whenever a track is cached: one tap for a QR share from anywhere in Spotify.\n"
+           "Pulsing Now Playing strip with the big QR square stays in the Settings hero when a track is playing.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
