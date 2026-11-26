@@ -17,20 +17,29 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install build deps
-        run: sudo apt-get update && sudo apt-get install -y curl git perl build-essential fakeroot dpkg xz-utils
+        run: sudo apt-get update && sudo apt-get install -y curl git perl build-essential fakeroot dpkg xz-utils lzma
 
       - name: Set up Theos + iOS cross toolchain
         run: |
           git clone --recursive https://github.com/theos/theos.git $THEOS
           curl -L https://github.com/theos/sdks/archive/master.tar.gz | tar xz -C $THEOS/sdks --strip 1
-          curl -L -o /tmp/toolchain.tar.lzma https://github.com/sbingner/llvm-project/releases/download/v10.0.0-1/linux-ios-arm64_strap.tar.lzma
+
+          TC_URL="https://github.com/sbingner/llvm-project/releases/download/v10.0.0-1/linux-ios-arm64e-clang-toolchain.tar.lzma"
+          echo "=== downloading toolchain ==="
+          curl -fL -o /tmp/toolchain.tar.lzma "$TC_URL"
+          ls -la /tmp/toolchain.tar.lzma
+
           mkdir -p /tmp/tc
           tar --lzma -xf /tmp/toolchain.tar.lzma -C /tmp/tc
           echo "=== extracted layout ==="
-          find /tmp/tc -maxdepth 3 -name clang -type f | head
+          find /tmp/tc -maxdepth 4 -name clang -type f | head
+
           mkdir -p $THEOS/toolchain/linux
-          TC_ROOT=$(find /tmp/tc -maxdepth 2 -type d -name bin | head -1 | xargs dirname)
+          TC_BIN=$(find /tmp/tc -maxdepth 4 -name clang -type f | head -1)
+          TC_ROOT=$(dirname $(dirname "$TC_BIN"))
+          echo "TC_ROOT=$TC_ROOT"
           mv "$TC_ROOT" $THEOS/toolchain/linux/iphone
+
           echo "=== verify ==="
           ls $THEOS/toolchain/linux/iphone/bin/clang
           $THEOS/toolchain/linux/iphone/bin/clang --version || true
