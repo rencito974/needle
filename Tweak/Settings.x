@@ -337,6 +337,28 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     }
 }
 
++ (void)_needleGearTap:(UITapGestureRecognizer *)g {
+    UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+    [fb impactOccurred];
+    extern void NeedleOpenSettings(void);
+    NeedleOpenSettings();
+}
+
++ (void)_needleGearPan:(UIPanGestureRecognizer *)g {
+    UIView *host = g.view;
+    if (!host || !host.superview) return;
+    CGPoint t = [g translationInView:host.superview];
+    host.center = CGPointMake(host.center.x + t.x, host.center.y + t.y);
+    [g setTranslation:CGPointZero inView:host.superview];
+    if (g.state == UIGestureRecognizerStateEnded) {
+        CGRect bounds = host.superview.bounds;
+        CGFloat x = host.center.x < bounds.size.width / 2 ? host.frame.size.width / 2 + 12 : bounds.size.width - host.frame.size.width / 2 - 12;
+        [UIView animateWithDuration:0.25 animations:^{
+            host.center = CGPointMake(x, host.center.y);
+        }];
+    }
+}
+
 @end
 
 static UIViewController *_NeedleTopVC(void) {
@@ -386,29 +408,79 @@ static void _NeedleAttachLongPress(UIView *view) {
 }
 %end
 
+static UIView *_needleFloatingHost = nil;
+
+static void NeedleInstallFloatingButton(void) {
+    UIWindow *key = nil;
+    NSArray *scenes = [[UIApplication sharedApplication].connectedScenes allObjects];
+    for (UIScene *s in scenes) {
+        if ([s isKindOfClass:[UIWindowScene class]] && s.activationState == UISceneActivationStateForegroundActive) {
+            for (UIWindow *w in ((UIWindowScene *)s).windows) {
+                if (w.isKeyWindow) { key = w; break; }
+            }
+            if (key) break;
+        }
+    }
+    if (!key) return;
+    if (_needleFloatingHost && _needleFloatingHost.window == key) return;
+    if (_needleFloatingHost) {
+        [_needleFloatingHost removeFromSuperview];
+        _needleFloatingHost = nil;
+    }
+
+    CGFloat btnSize = 44;
+    CGRect frame = CGRectMake(key.bounds.size.width - btnSize - 12, 70, btnSize, btnSize);
+    _needleFloatingHost = [[UIView alloc] initWithFrame:frame];
+    _needleFloatingHost.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleBottomMargin;
+    _needleFloatingHost.backgroundColor = [UIColor colorWithWhite:0 alpha:0.55];
+    _needleFloatingHost.layer.cornerRadius = btnSize / 2;
+    _needleFloatingHost.layer.shadowColor = [UIColor blackColor].CGColor;
+    _needleFloatingHost.layer.shadowOffset = CGSizeMake(0, 2);
+    _needleFloatingHost.layer.shadowRadius = 6;
+    _needleFloatingHost.layer.shadowOpacity = 0.4;
+    _needleFloatingHost.alpha = 0.78;
+
+    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:19 weight:UIImageSymbolWeightBold];
+    UIImage *icon = [UIImage systemImageNamed:@"gearshape.fill" withConfiguration:cfg];
+    UIImageView *iv = [[UIImageView alloc] initWithImage:icon];
+    iv.tintColor = [UIColor whiteColor];
+    iv.contentMode = UIViewContentModeCenter;
+    iv.frame = _needleFloatingHost.bounds;
+    iv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [_needleFloatingHost addSubview:iv];
+
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]
+        initWithTarget:[NeedleSettingsViewController class]
+        action:@selector(_needleGearTap:)];
+    [_needleFloatingHost addGestureRecognizer:tap];
+
+    UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc]
+        initWithTarget:[NeedleSettingsViewController class]
+        action:@selector(_needleGearPan:)];
+    [_needleFloatingHost addGestureRecognizer:pan];
+
+    [key addSubview:_needleFloatingHost];
+}
+
+%hook UIViewController
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            NeedleInstallFloatingButton();
+        });
+    });
+}
+%end
+
 %hook UIWindow
 - (void)motionEnded:(UIEventSubtype)motion withEvent:(UIEvent *)event {
     %orig;
     if (motion == UIEventSubtypeMotionShake) {
-        UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleHeavy];
-        [fb impactOccurred];
         extern void NeedleOpenSettings(void);
         NeedleOpenSettings();
     }
-}
-
-- (void)didAddSubview:(UIView *)sub {
-    %orig;
-    static char _rootTapKey;
-    if (objc_getAssociatedObject(self, &_rootTapKey)) return;
-    objc_setAssociatedObject(self, &_rootTapKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]
-        initWithTarget:[NeedleSettingsViewController class]
-        action:@selector(_needleTripleTap:)];
-    tap.numberOfTapsRequired = 3;
-    tap.numberOfTouchesRequired = 2;
-    tap.cancelsTouchesInView = NO;
-    [self addGestureRecognizer:tap];
 }
 %end
 
