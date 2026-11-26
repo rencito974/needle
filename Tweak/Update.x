@@ -4,15 +4,15 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.14.0";
+static NSString *const NeedleCurrentVersion = @"2.15.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Settings hero redesigned again: three live KPIs (songs today, day streak, minutes) plus a vinyl + needle motif in the corner.\n"
-           "Close X now renders properly (no more empty circle).\n"
-           "QR gets its own always-on floating button beside the gear whenever a track is cached: one tap for a QR share from anywhere in Spotify.\n"
-           "Pulsing Now Playing strip with the big QR square stays in the Settings hero when a track is playing.";
+    return @"Turntable mode: rotate your phone to landscape and Spotify disappears behind a full screen spinning vinyl with the current album art pressed into the label.\n"
+           "Drag the disc to spin it faster or scratch it; pinch to change the idle RPM.\n"
+           "Volume boost is now a slider from 0.5x to 3.5x, not a fixed 1.5x toggle.\n"
+           "Album artwork is now cached from the system Now Playing card so the turntable has something to show.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {

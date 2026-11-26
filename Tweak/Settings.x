@@ -3,8 +3,10 @@
 
 extern BOOL NeedlePrefBool(NSString *key, BOOL def);
 extern NSString *NeedlePrefString(NSString *key);
+extern float NeedlePrefFloat(NSString *key, float def);
 extern void NeedlePrefSetBool(NSString *key, BOOL val);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
+extern void NeedlePrefSetFloat(NSString *key, float val);
 extern UIColor *NeedleCurrentColor(void);
 extern NSMutableDictionary *_needleCurrentTrackCache;
 
@@ -12,6 +14,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     NeedleRowSwitch,
     NeedleRowText,
     NeedleRowButton,
+    NeedleRowSlider,
 };
 
 @interface NeedleRow : NSObject
@@ -21,6 +24,10 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 @property (nonatomic, copy) NSString *placeholder;
 @property (nonatomic, copy) NSString *symbol;
 @property (nonatomic, assign) BOOL defaultBool;
+@property (nonatomic, assign) float defaultFloat;
+@property (nonatomic, assign) float minFloat;
+@property (nonatomic, assign) float maxFloat;
+@property (nonatomic, copy) NSString *suffix;
 @property (nonatomic, copy) void (^action)(void);
 @end
 
@@ -51,6 +58,18 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     r.symbol = sym;
     return r;
 }
++ (instancetype)slider:(NSString *)label key:(NSString *)key def:(float)def min:(float)minV max:(float)maxV suffix:(NSString *)sfx symbol:(NSString *)sym {
+    NeedleRow *r = [NeedleRow new];
+    r.kind = NeedleRowSlider;
+    r.label = label;
+    r.prefKey = key;
+    r.defaultFloat = def;
+    r.minFloat = minV;
+    r.maxFloat = maxV;
+    r.suffix = sfx;
+    r.symbol = sym;
+    return r;
+}
 @end
 
 @interface NeedleSection : NSObject
@@ -77,7 +96,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.14";
+    return @"2.15";
 }
 
 @implementation NeedleSettingsViewController
@@ -323,7 +342,7 @@ static NSString *_NeedleVersionTag(void) {
         [NeedleRow sw:@"Crossfade 20 s" key:@"CrossfadeMax" def:NO symbol:@"waveform.path.ecg"],
         [NeedleRow sw:@"Gapless within album" key:@"GaplessAlbum" def:YES symbol:@"forward.end"],
         [NeedleRow sw:@"Force 320 kbps" key:@"HighBitrate" def:NO symbol:@"4k.tv"],
-        [NeedleRow sw:@"Volume boost" key:@"VolumeBoost" def:NO symbol:@"speaker.wave.3.fill"],
+        [NeedleRow slider:@"Volume boost" key:@"VolumeBoostAmount" def:1.0 min:0.5 max:3.5 suffix:@"x" symbol:@"speaker.wave.3.fill"],
         [NeedleRow sw:@"Free-tier unlocks" key:@"FreeUnlocks" def:NO symbol:@"crown.fill"],
     ];
 
@@ -362,6 +381,7 @@ static NSString *_NeedleVersionTag(void) {
         [NeedleRow sw:@"Mini player redesign" key:@"MiniPlayerRedesign" def:YES symbol:@"rectangle.bottomthird.inset.filled"],
         [NeedleRow sw:@"Waveform scrubber" key:@"WaveformScrubber" def:NO symbol:@"waveform"],
         [NeedleRow sw:@"Bluetooth badge" key:@"BTBadge" def:YES symbol:@"airpods"],
+        [NeedleRow sw:@"Turntable in landscape" key:@"TurntableLandscape" def:YES symbol:@"opticaldisc"],
     ];
 
     NeedleSection *content = [NeedleSection new];
@@ -463,6 +483,11 @@ static NSString *_NeedleVersionTag(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)t { return self.sections.count; }
 - (NSInteger)tableView:(UITableView *)t numberOfRowsInSection:(NSInteger)s { return self.sections[s].rows.count; }
 
+- (CGFloat)tableView:(UITableView *)t heightForRowAtIndexPath:(NSIndexPath *)ip {
+    NeedleRow *row = self.sections[ip.section].rows[ip.row];
+    return row.kind == NeedleRowSlider ? 80 : 54;
+}
+
 - (UITableViewCell *)tableView:(UITableView *)t cellForRowAtIndexPath:(NSIndexPath *)ip {
     NeedleRow *row = self.sections[ip.section].rows[ip.row];
     NSInteger count = self.sections[ip.section].rows.count;
@@ -475,6 +500,7 @@ static NSString *_NeedleVersionTag(void) {
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
 
     UIView *content = cell.contentView;
+    BOOL isSlider = row.kind == NeedleRowSlider;
 
     if (row.symbol) {
         UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:19 weight:UIImageSymbolWeightMedium];
@@ -488,8 +514,12 @@ static NSString *_NeedleVersionTag(void) {
             [iv.widthAnchor constraintEqualToConstant:28],
             [iv.heightAnchor constraintEqualToConstant:28],
             [iv.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:22],
-            [iv.centerYAnchor constraintEqualToAnchor:content.centerYAnchor],
         ]];
+        if (isSlider) {
+            [iv.topAnchor constraintEqualToAnchor:content.topAnchor constant:14].active = YES;
+        } else {
+            [iv.centerYAnchor constraintEqualToAnchor:content.centerYAnchor].active = YES;
+        }
     }
 
     UILabel *label = [[UILabel alloc] init];
@@ -500,8 +530,12 @@ static NSString *_NeedleVersionTag(void) {
     [content addSubview:label];
     [NSLayoutConstraint activateConstraints:@[
         [label.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:row.symbol ? 62 : 22],
-        [label.centerYAnchor constraintEqualToAnchor:content.centerYAnchor],
     ]];
+    if (isSlider) {
+        [label.topAnchor constraintEqualToAnchor:content.topAnchor constant:14].active = YES;
+    } else {
+        [label.centerYAnchor constraintEqualToAnchor:content.centerYAnchor].active = YES;
+    }
 
     if (row.kind == NeedleRowSwitch) {
         UISwitch *sw = [UISwitch new];
@@ -547,6 +581,42 @@ static NSString *_NeedleVersionTag(void) {
             [chev.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-22],
             [chev.centerYAnchor constraintEqualToAnchor:content.centerYAnchor],
         ]];
+    } else if (row.kind == NeedleRowSlider) {
+        float cur = NeedlePrefFloat(row.prefKey, row.defaultFloat);
+        if (cur < row.minFloat) cur = row.minFloat;
+        if (cur > row.maxFloat) cur = row.maxFloat;
+
+        UILabel *val = [[UILabel alloc] init];
+        val.text = [NSString stringWithFormat:@"%.2f%@", cur, row.suffix ?: @""];
+        val.textColor = NeedleCurrentColor();
+        val.font = [UIFont monospacedDigitSystemFontOfSize:14 weight:UIFontWeightBold];
+        val.textAlignment = NSTextAlignmentRight;
+        val.translatesAutoresizingMaskIntoConstraints = NO;
+        [content addSubview:val];
+        [NSLayoutConstraint activateConstraints:@[
+            [val.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-22],
+            [val.topAnchor constraintEqualToAnchor:content.topAnchor constant:14],
+            [val.widthAnchor constraintGreaterThanOrEqualToConstant:60],
+        ]];
+
+        UISlider *slider = [[UISlider alloc] init];
+        slider.minimumValue = row.minFloat;
+        slider.maximumValue = row.maxFloat;
+        slider.value = cur;
+        slider.continuous = YES;
+        slider.minimumTrackTintColor = NeedleCurrentColor();
+        slider.maximumTrackTintColor = [UIColor colorWithWhite:1 alpha:0.14];
+        slider.translatesAutoresizingMaskIntoConstraints = NO;
+        objc_setAssociatedObject(slider, "_needleKey", row.prefKey, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(slider, "_needleValLbl", val, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(slider, "_needleSuffix", row.suffix ?: @"", OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [slider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
+        [content addSubview:slider];
+        [NSLayoutConstraint activateConstraints:@[
+            [slider.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:row.symbol ? 62 : 22],
+            [slider.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-22],
+            [slider.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-14],
+        ]];
     }
 
     if (!last) {
@@ -569,6 +639,15 @@ static NSString *_NeedleVersionTag(void) {
     [fb impactOccurred];
     NSString *key = objc_getAssociatedObject(sw, "_needleKey");
     if (key) NeedlePrefSetBool(key, sw.on);
+}
+
+- (void)sliderChanged:(UISlider *)slider {
+    NSString *key = objc_getAssociatedObject(slider, "_needleKey");
+    UILabel *val = objc_getAssociatedObject(slider, "_needleValLbl");
+    NSString *sfx = objc_getAssociatedObject(slider, "_needleSuffix");
+    float v = slider.value;
+    val.text = [NSString stringWithFormat:@"%.2f%@", v, sfx ?: @""];
+    if (key) NeedlePrefSetFloat(key, v);
 }
 
 - (UIView *)tableView:(UITableView *)t viewForHeaderInSection:(NSInteger)s {

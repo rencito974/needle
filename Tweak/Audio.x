@@ -2,6 +2,7 @@
 #import <AVFoundation/AVFoundation.h>
 
 extern BOOL NeedlePrefBool(NSString *key, BOOL def);
+extern float NeedlePrefFloat(NSString *key, float def);
 
 @interface SPTCrossfadeImplementation : NSObject
 @end
@@ -54,8 +55,13 @@ extern BOOL NeedlePrefBool(NSString *key, BOOL def);
 %hook AVAudioEngine
 - (BOOL)startAndReturnError:(NSError **)err {
     BOOL ok = %orig;
-    if (ok && NeedlePrefBool(@"VolumeBoost", NO)) {
-        self.mainMixerNode.outputVolume = 1.5;
+    if (ok) {
+        float boost = NeedlePrefFloat(@"VolumeBoostAmount", 1.0);
+        if (boost < 0.5) boost = 0.5;
+        if (boost > 4.0) boost = 4.0;
+        if (fabsf(boost - 1.0) > 0.01) {
+            self.mainMixerNode.outputVolume = boost;
+        }
     }
     return ok;
 }

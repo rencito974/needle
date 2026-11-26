@@ -30,6 +30,24 @@ NSString *NeedlePrefString(NSString *key) {
     return [v isKindOfClass:[NSString class]] ? v : nil;
 }
 
+float NeedlePrefFloat(NSString *key, float def) {
+    id v = NeedlePrefRaw(key);
+    if ([v isKindOfClass:[NSNumber class]]) return [v floatValue];
+    return def;
+}
+
+void NeedlePrefSetFloat(NSString *key, float val) {
+    [_NeedleSandboxDefaults() setFloat:val forKey:key];
+    CFPreferencesSetValue(
+        (__bridge CFStringRef)key,
+        (__bridge CFNumberRef)@(val),
+        CFSTR("com.renn.needle"),
+        kCFPreferencesAnyUser,
+        kCFPreferencesAnyHost);
+    CFPreferencesSynchronize(CFSTR("com.renn.needle"), kCFPreferencesAnyUser, kCFPreferencesAnyHost);
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"NeedlePrefsChanged" object:key];
+}
+
 void NeedlePrefSetBool(NSString *key, BOOL val) {
     [_NeedleSandboxDefaults() setBool:val forKey:key];
     CFPreferencesSetValue(
