@@ -19,33 +19,46 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 @property (nonatomic, copy) NSString *label;
 @property (nonatomic, copy) NSString *prefKey;
 @property (nonatomic, copy) NSString *placeholder;
+@property (nonatomic, copy) NSString *symbol;
 @property (nonatomic, assign) BOOL defaultBool;
 @property (nonatomic, copy) void (^action)(void);
 @end
 
 @implementation NeedleRow
-+ (instancetype)sw:(NSString *)label key:(NSString *)key def:(BOOL)def {
++ (instancetype)sw:(NSString *)label key:(NSString *)key def:(BOOL)def symbol:(NSString *)sym {
     NeedleRow *r = [NeedleRow new];
     r.kind = NeedleRowSwitch;
     r.label = label;
     r.prefKey = key;
     r.defaultBool = def;
+    r.symbol = sym;
     return r;
 }
-+ (instancetype)text:(NSString *)label key:(NSString *)key placeholder:(NSString *)ph {
++ (instancetype)sw:(NSString *)label key:(NSString *)key def:(BOOL)def {
+    return [self sw:label key:key def:def symbol:nil];
+}
++ (instancetype)text:(NSString *)label key:(NSString *)key placeholder:(NSString *)ph symbol:(NSString *)sym {
     NeedleRow *r = [NeedleRow new];
     r.kind = NeedleRowText;
     r.label = label;
     r.prefKey = key;
     r.placeholder = ph;
+    r.symbol = sym;
     return r;
 }
-+ (instancetype)button:(NSString *)label action:(void (^)(void))action {
++ (instancetype)text:(NSString *)label key:(NSString *)key placeholder:(NSString *)ph {
+    return [self text:label key:key placeholder:ph symbol:nil];
+}
++ (instancetype)button:(NSString *)label action:(void (^)(void))action symbol:(NSString *)sym {
     NeedleRow *r = [NeedleRow new];
     r.kind = NeedleRowButton;
     r.label = label;
     r.action = action;
+    r.symbol = sym;
     return r;
+}
++ (instancetype)button:(NSString *)label action:(void (^)(void))action {
+    return [self button:label action:action symbol:nil];
 }
 + (instancetype)footer:(NSString *)text {
     NeedleRow *r = [NeedleRow new];
@@ -128,37 +141,59 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 }
 
 - (void)buildModel {
-    NeedleSection *premium = [NeedleSection new];
-    premium.title = @"Premium flags";
-    premium.rows = @[
-        [NeedleRow sw:@"Premium flags on" key:@"PremiumOn" def:YES],
-        [NeedleRow sw:@"Block ads" key:@"AdsBlocked" def:YES],
-        [NeedleRow sw:@"Block telemetry" key:@"TelemetryBlocked" def:YES],
-    ];
-    premium.footer = @"Hooks the entitlement predicates Spotify checks before enabling paid features.";
+    __weak typeof(self) weak = self;
 
     NeedleSection *playback = [NeedleSection new];
     playback.title = @"Playback";
     playback.rows = @[
-        [NeedleRow sw:@"Fisher Yates shuffle" key:@"RealShuffle" def:YES],
-        [NeedleRow sw:@"Disable Canvas video" key:@"CanvasOff" def:NO],
+        [NeedleRow sw:@"Fisher Yates shuffle" key:@"RealShuffle" def:YES symbol:@"shuffle"],
     ];
+    playback.footer = @"Real random shuffle instead of Spotify's balanced algorithm.";
+
+    extern void NeedleStartSleepTimer(NSInteger minutes);
+    extern void NeedleCancelSleepTimer(void);
+    extern NSTimeInterval NeedleSleepTimerRemaining(void);
+    extern BOOL NeedleSleepTimerActive(void);
+
+    NeedleSection *sleep = [NeedleSection new];
+    sleep.title = @"Sleep timer";
+    sleep.rows = @[
+        [NeedleRow button:@"10 minutes" action:^{
+            NeedleStartSleepTimer(10);
+            [weak alert:@"Sleep timer on" message:@"Playback will pause in 10 minutes."];
+        } symbol:@"moon"],
+        [NeedleRow button:@"30 minutes" action:^{
+            NeedleStartSleepTimer(30);
+            [weak alert:@"Sleep timer on" message:@"Playback will pause in 30 minutes."];
+        } symbol:@"moon.stars"],
+        [NeedleRow button:@"1 hour" action:^{
+            NeedleStartSleepTimer(60);
+            [weak alert:@"Sleep timer on" message:@"Playback will pause in 1 hour."];
+        } symbol:@"moon.zzz"],
+        [NeedleRow button:@"Cancel timer" action:^{
+            NeedleCancelSleepTimer();
+            [weak alert:@"Sleep timer off" message:@"Timer cleared."];
+        } symbol:@"xmark.circle"],
+    ];
+    sleep.footer = @"Pauses playback after the chosen interval.";
 
     NeedleSection *look = [NeedleSection new];
     look.title = @"Look";
     look.rows = @[
-        [NeedleRow sw:@"Album colored Now Playing" key:@"AlbumColorUI" def:YES],
-        [NeedleRow sw:@"Apple Music lockscreen art" key:@"BigLockscreenArt" def:YES],
+        [NeedleRow sw:@"Album colored UI" key:@"AlbumColorUI" def:YES symbol:@"paintpalette"],
+        [NeedleRow sw:@"Artwork breathing" key:@"ArtworkBreathing" def:YES symbol:@"waveform.path"],
+        [NeedleRow sw:@"Accent colors on controls" key:@"AccentColors" def:YES symbol:@"circle.hexagongrid.fill"],
+        [NeedleRow sw:@"Apple Music lockscreen art" key:@"BigLockscreenArt" def:YES symbol:@"lock.iphone"],
     ];
+    look.footer = @"Theme the Now Playing screen, mini player, play button and progress bar with the current album's palette.";
 
-    __weak typeof(self) weak = self;
     NeedleSection *scrobble = [NeedleSection new];
     scrobble.title = @"Last.fm scrobble";
     scrobble.rows = @[
-        [NeedleRow sw:@"Scrobble plays" key:@"ScrobbleOn" def:NO],
-        [NeedleRow text:@"API key" key:@"LastFmApiKey" placeholder:@"paste here"],
-        [NeedleRow text:@"Shared secret" key:@"LastFmSecret" placeholder:@"paste here"],
-        [NeedleRow text:@"Session key" key:@"LastFmSession" placeholder:@"paste from auth"],
+        [NeedleRow sw:@"Scrobble plays" key:@"ScrobbleOn" def:NO symbol:@"waveform.badge.plus"],
+        [NeedleRow text:@"API key" key:@"LastFmApiKey" placeholder:@"paste here" symbol:@"key"],
+        [NeedleRow text:@"Shared secret" key:@"LastFmSecret" placeholder:@"paste here" symbol:@"lock.shield"],
+        [NeedleRow text:@"Session key" key:@"LastFmSession" placeholder:@"paste from auth" symbol:@"person.badge.key"],
         [NeedleRow button:@"Open Last.fm sign in" action:^{
             NSString *apiKey = NeedlePrefString(@"LastFmApiKey");
             if (!apiKey.length) {
@@ -167,19 +202,20 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
             }
             NSString *url = [NSString stringWithFormat:@"https://www.last.fm/api/auth/?api_key=%@", apiKey];
             [[UIApplication sharedApplication] openURL:[NSURL URLWithString:url] options:@{} completionHandler:nil];
-        }],
+        } symbol:@"safari"],
     ];
     scrobble.footer = @"Register at last.fm/api/account/create, paste the key and secret, tap Open Last.fm sign in, approve, then paste the session token out of the redirect URL into Session key.";
 
     NeedleSection *about = [NeedleSection new];
+    about.title = @"About";
     about.rows = @[
         [NeedleRow button:@"Needle on Discord" action:^{
             [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://discord.gg/4Fk34R76tt"] options:@{} completionHandler:nil];
-        }],
+        } symbol:@"bubble.left.and.bubble.right"],
     ];
-    about.footer = @"Needle v1.0 by Renzo. Discord @renzoo7646.";
+    about.footer = @"Needle v1.1 by Renzo. Discord @renzoo7646.";
 
-    self.sections = @[premium, playback, look, scrobble, about];
+    self.sections = @[playback, sleep, look, scrobble, about];
 }
 
 - (void)alert:(NSString *)title message:(NSString *)msg {
@@ -196,9 +232,16 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 - (UITableViewCell *)tableView:(UITableView *)t cellForRowAtIndexPath:(NSIndexPath *)ip {
     NeedleRow *row = self.sections[ip.section].rows[ip.row];
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-    cell.backgroundColor = [UIColor colorWithWhite:0.1 alpha:0.6];
+    cell.backgroundColor = [UIColor colorWithWhite:0.08 alpha:0.75];
     cell.textLabel.textColor = [UIColor whiteColor];
     cell.textLabel.text = row.label;
+    cell.textLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
+    cell.imageView.tintColor = NeedleCurrentColor();
+    if (row.symbol) {
+        UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:17 weight:UIImageSymbolWeightSemibold];
+        UIImage *icon = [UIImage systemImageNamed:row.symbol withConfiguration:cfg];
+        cell.imageView.image = icon;
+    }
 
     if (row.kind == NeedleRowSwitch) {
         UISwitch *sw = [UISwitch new];
@@ -224,14 +267,36 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
     } else if (row.kind == NeedleRowButton) {
         cell.textLabel.textColor = NeedleCurrentColor();
-        cell.textLabel.textAlignment = NSTextAlignmentCenter;
+        cell.textLabel.textAlignment = NSTextAlignmentLeft;
     }
     return cell;
 }
 
 - (void)switchFlipped:(UISwitch *)sw {
+    UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+    [fb impactOccurred];
     NSString *key = objc_getAssociatedObject(sw, "_needleKey");
     if (key) NeedlePrefSetBool(key, sw.on);
+}
+
+- (UIView *)tableView:(UITableView *)t viewForHeaderInSection:(NSInteger)s {
+    NeedleSection *sec = self.sections[s];
+    if (!sec.title.length) return nil;
+    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, t.bounds.size.width, 44)];
+    UIView *bar = [[UIView alloc] initWithFrame:CGRectMake(20, 28, 3, 14)];
+    bar.backgroundColor = NeedleCurrentColor();
+    bar.layer.cornerRadius = 1.5;
+    [header addSubview:bar];
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(32, 22, t.bounds.size.width - 60, 20)];
+    lbl.text = sec.title.uppercaseString;
+    lbl.textColor = [UIColor colorWithWhite:0.85 alpha:1.0];
+    lbl.font = [UIFont systemFontOfSize:12 weight:UIFontWeightHeavy];
+    [header addSubview:lbl];
+    return header;
+}
+
+- (CGFloat)tableView:(UITableView *)t heightForHeaderInSection:(NSInteger)s {
+    return self.sections[s].title.length ? 44 : 10;
 }
 
 - (BOOL)textFieldShouldReturn:(UITextField *)tf {
@@ -247,7 +312,11 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 - (void)tableView:(UITableView *)t didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [t deselectRowAtIndexPath:ip animated:YES];
     NeedleRow *row = self.sections[ip.section].rows[ip.row];
-    if (row.kind == NeedleRowButton && row.action) row.action();
+    if (row.kind == NeedleRowButton && row.action) {
+        UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+        [fb impactOccurred];
+        row.action();
+    }
 }
 
 + (void)_needleLongPress:(UILongPressGestureRecognizer *)g {
