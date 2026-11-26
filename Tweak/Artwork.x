@@ -55,8 +55,12 @@ void NeedleSetPalette(UIColor *c) {
     [[NSNotificationCenter defaultCenter] postNotificationName:@"NeedlePaletteChanged" object:c];
 }
 
+extern UIColor *NeedleThemeOverrideColor(void);
+
 UIColor *NeedleCurrentColor(void) {
-    return _NeedlePalette ?: [UIColor colorWithWhite:0.08 alpha:1.0];
+    UIColor *override = NeedleThemeOverrideColor();
+    if (override) return override;
+    return _NeedlePalette ?: [UIColor colorWithRed:0.11 green:0.73 blue:0.33 alpha:1.0];
 }
 
 UIColor *NeedleContrastColor(void) {

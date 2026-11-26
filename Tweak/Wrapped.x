@@ -51,6 +51,16 @@ typedef NS_ENUM(NSInteger, NeedleWrappedRange) {
     [close addTarget:self action:@selector(dismissSelf) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:close];
 
+    UIButton *share = [UIButton buttonWithType:UIButtonTypeSystem];
+    share.frame = CGRectMake(w - 100, 58, 36, 36);
+    share.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.12];
+    share.layer.cornerRadius = 18;
+    [share setImage:[UIImage systemImageNamed:@"square.and.arrow.up"
+        withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
+    share.tintColor = [UIColor whiteColor];
+    [share addTarget:self action:@selector(shareSelf) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:share];
+
     UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(24, 60, w - 100, 40)];
     title.text = @"Wrapped";
     title.textColor = [UIColor whiteColor];
@@ -167,6 +177,28 @@ typedef NS_ENUM(NSInteger, NeedleWrappedRange) {
 }
 
 - (void)dismissSelf { [self dismissViewControllerAnimated:YES completion:nil]; }
+
+- (void)shareSelf {
+    UIGraphicsImageRendererFormat *fmt = [UIGraphicsImageRendererFormat defaultFormat];
+    fmt.scale = 2.0;
+    UIGraphicsImageRenderer *r = [[UIGraphicsImageRenderer alloc] initWithSize:self.view.bounds.size format:fmt];
+    UIImage *img = [r imageWithActions:^(UIGraphicsImageRendererContext *ctx) {
+        [self.view drawViewHierarchyInRect:self.view.bounds afterScreenUpdates:YES];
+        NSString *stamp = @"Made with Needle";
+        NSDictionary *attrs = @{
+            NSFontAttributeName: [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold],
+            NSForegroundColorAttributeName: [UIColor colorWithWhite:1 alpha:0.5],
+        };
+        CGSize sz = [stamp sizeWithAttributes:attrs];
+        [stamp drawAtPoint:CGPointMake(self.view.bounds.size.width - sz.width - 20, self.view.bounds.size.height - sz.height - 30) withAttributes:attrs];
+    }];
+    UIActivityViewController *a = [[UIActivityViewController alloc] initWithActivityItems:@[img] applicationActivities:nil];
+    if (a.popoverPresentationController) {
+        a.popoverPresentationController.sourceView = self.view;
+        a.popoverPresentationController.sourceRect = CGRectMake(self.view.bounds.size.width - 80, 76, 1, 1);
+    }
+    [self presentViewController:a animated:YES completion:nil];
+}
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)t { return 2; }
 - (NSInteger)tableView:(UITableView *)t numberOfRowsInSection:(NSInteger)s {

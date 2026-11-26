@@ -13,6 +13,8 @@ static __weak UIView *_needleLyricsContainer = nil;
 @property (nonatomic, copy) NSString *artistName;
 @end
 
+extern void NeedleSeekPlayerTo(NSTimeInterval seconds);
+
 @implementation NeedleFullLyricsViewController
 
 - (void)loadView {
@@ -70,6 +72,10 @@ static __weak UIView *_needleLyricsContainer = nil;
         l.numberOfLines = 0;
         l.textColor = isCurrent ? [UIColor whiteColor] : [UIColor colorWithWhite:1 alpha:0.45];
         l.font = [UIFont systemFontOfSize:isCurrent ? 26 : 22 weight:isCurrent ? UIFontWeightHeavy : UIFontWeightSemibold];
+        l.userInteractionEnabled = YES;
+        l.tag = i;
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(_lineTapped:)];
+        [l addGestureRecognizer:tap];
         [l sizeToFit];
         CGRect f = l.frame;
         f.origin.x = 28;
@@ -86,6 +92,18 @@ static __weak UIView *_needleLyricsContainer = nil;
 }
 
 - (void)dismissSelf { [self dismissViewControllerAnimated:YES completion:nil]; }
+
+- (void)_lineTapped:(UITapGestureRecognizer *)g {
+    NSInteger idx = g.view.tag;
+    if (self.lines.count < 2) return;
+    NSTimeInterval dur = [[NSUserDefaults standardUserDefaults] doubleForKey:@"NeedleLastTrackDuration"];
+    if (dur <= 0) dur = 210;
+    NSTimeInterval frac = (NSTimeInterval)idx / (NSTimeInterval)self.lines.count;
+    NeedleSeekPlayerTo(dur * frac);
+    UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+    [fb impactOccurred];
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
 
 @end
 

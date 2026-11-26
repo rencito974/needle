@@ -65,3 +65,17 @@ static BOOL NeedleReadShuffleState(id target) {
 - (BOOL)isSmartShuffleEnabled { return NO; }
 - (BOOL)isSmartShuffleAvailable { return NO; }
 %end
+
+@interface SPTPlayerImpl : NSObject
+@end
+
+%hook SPTPlayerImpl
+- (void)setShuffleEnabled:(BOOL)on {
+    if (NeedlePrefBool(@"ShuffleLock", NO) && !on) return;
+    %orig;
+}
+- (void)setShuffle:(BOOL)on {
+    if (NeedlePrefBool(@"ShuffleLock", NO) && !on) return;
+    %orig;
+}
+%end

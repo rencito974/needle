@@ -89,30 +89,32 @@ extern UIColor *NeedleCurrentColor(void);
     BOOL dark = (rr + gg + bb) < 1.5;
     UIColor *mark = dark ? [UIColor whiteColor] : [UIColor blackColor];
 
+    tile.layer.cornerRadius = cellW / 2;
+
     CGFloat cx = cellW / 2;
-    CGFloat cy = cellW / 2;
-    CGFloat lineW = cellW * 0.075;
+    CGFloat lineW = cellW * 0.085;
+    CGFloat arcCenterY = cellW * 0.48;
+
+    CGFloat radii[3] = { cellW * 0.33, cellW * 0.23, cellW * 0.14 };
+    CGFloat spans[3] = { 0.72, 0.60, 0.48 };
+    CGFloat yOffsets[3] = { cellW * 0.10, cellW * 0.03, -cellW * 0.03 };
 
     for (NSInteger i = 0; i < 3; i++) {
-        CGFloat radius = cellW * (0.17 + i * 0.09);
+        CGFloat radius = radii[i];
+        CGFloat halfSpan = spans[i] * M_PI / 2;
         CAShapeLayer *arc = [CAShapeLayer layer];
-        UIBezierPath *p = [UIBezierPath bezierPathWithArcCenter:CGPointMake(cx, cy + radius * 0.3)
+        UIBezierPath *p = [UIBezierPath bezierPathWithArcCenter:CGPointMake(cx, arcCenterY + yOffsets[i])
             radius:radius
-            startAngle:-M_PI * 0.85
-            endAngle:-M_PI * 0.15
-            clockwise:YES];
+            startAngle:M_PI + halfSpan
+            endAngle:-halfSpan
+            clockwise:NO];
         arc.path = p.CGPath;
         arc.strokeColor = mark.CGColor;
         arc.fillColor = [UIColor clearColor].CGColor;
-        arc.lineWidth = lineW;
+        arc.lineWidth = lineW - i * 1.0;
         arc.lineCap = kCALineCapRound;
         [tile.layer addSublayer:arc];
     }
-    CAShapeLayer *dot = [CAShapeLayer layer];
-    UIBezierPath *d = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(cx - lineW * 0.75, cy + cellW * 0.12, lineW * 1.5, lineW * 1.5)];
-    dot.path = d.CGPath;
-    dot.fillColor = mark.CGColor;
-    [tile.layer addSublayer:dot];
 
     [cell.contentView addSubview:tile];
 

@@ -67,6 +67,40 @@ void NeedleClearHistory(void) {
     if (!album.length) { @try { album = [track valueForKey:@"album"]; } @catch (NSException *e) {} }
     @try { dur = [[track valueForKey:@"duration"] doubleValue] / 1000.0; } @catch (NSException *e) {}
 
+    [[NSUserDefaults standardUserDefaults] setDouble:dur forKey:@"NeedleLastTrackDuration"];
     NeedleLogPlay(name ?: @"Unknown", artist ?: @"Unknown", album ?: @"", dur);
 }
 %end
+
+static __weak id _needleSeekPlayer = nil;
+
+%hook SPTPlayerImpl
+- (void)positionChanged:(NSTimeInterval)pos {
+    %orig;
+    _needleSeekPlayer = self;
+}
+%end
+
+void NeedleSeekPlayerTo(NSTimeInterval seconds) {
+    id player = _needleSeekPlayer;
+    if (!player) return;
+    SEL sels[] = {
+        @selector(seekToPosition:),
+        @selector(seekTo:),
+        @selector(setPosition:),
+    };
+    double posMs = seconds * 1000.0;
+    for (NSUInteger i = 0; i < sizeof(sels) / sizeof(SEL); i++) {
+        if ([player respondsToSelector:sels[i]]) {
+            @try {
+                NSMethodSignature *sig = [[player class] instanceMethodSignatureForSelector:sels[i]];
+                NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                inv.selector = sels[i];
+                [inv setTarget:player];
+                [inv setArgument:&posMs atIndex:2];
+                [inv invoke];
+                return;
+            } @catch (NSException *e) {}
+        }
+    }
+}

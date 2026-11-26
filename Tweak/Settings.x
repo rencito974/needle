@@ -190,8 +190,11 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     playback.title = @"Playback";
     playback.rows = @[
         [NeedleRow sw:@"Fisher Yates shuffle" key:@"RealShuffle" def:YES symbol:@"shuffle"],
+        [NeedleRow sw:@"Shuffle lock (no auto-off)" key:@"ShuffleLock" def:NO symbol:@"lock.shield"],
+        [NeedleRow sw:@"Enhanced crossfade (20 s)" key:@"CrossfadeMax" def:NO symbol:@"waveform.path.ecg"],
+        [NeedleRow sw:@"Volume boost (1.5×)" key:@"VolumeBoost" def:NO symbol:@"speaker.wave.3.fill"],
     ];
-    playback.footer = @"Real random shuffle instead of Spotify's balanced algorithm.";
+    playback.footer = @"Shuffle lock stops Spotify silently turning shuffle back off. Volume boost adds extra gain on the mixer; strong tracks may clip.";
 
     extern void NeedleStartSleepTimer(NSInteger minutes);
     extern void NeedleCancelSleepTimer(void);
@@ -217,8 +220,9 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
             NeedleCancelSleepTimer();
             [weak alert:@"Sleep timer off" message:@"Timer cleared."];
         } symbol:@"xmark.circle"],
+        [NeedleRow sw:@"Fade out last 60 s" key:@"SleepFade" def:YES symbol:@"speaker.slash"],
     ];
-    sleep.footer = @"Pauses playback after the chosen interval.";
+    sleep.footer = @"Fade drops the volume gradually over the last minute before pausing.";
 
     NeedleSection *look = [NeedleSection new];
     look.title = @"Look";
@@ -228,6 +232,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
         [NeedleRow sw:@"Accent colors on controls" key:@"AccentColors" def:YES symbol:@"circle.hexagongrid.fill"],
         [NeedleRow sw:@"Lockscreen Ken Burns (beta)" key:@"LockMotion" def:NO symbol:@"lock.iphone"],
         [NeedleRow sw:@"Mini player redesign" key:@"MiniPlayerRedesign" def:YES symbol:@"rectangle.bottomthird.inset.filled"],
+        [NeedleRow sw:@"Waveform scrubber" key:@"WaveformScrubber" def:NO symbol:@"waveform"],
     ];
     look.footer = @"Theme and animate the Now Playing surfaces with the current album's palette.";
 
@@ -248,6 +253,10 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
             extern void NeedleOpenWrapped(void);
             NeedleOpenWrapped();
         } symbol:@"chart.bar.fill"],
+        [NeedleRow button:@"Themes" action:^{
+            extern void NeedleOpenThemeStore(void);
+            NeedleOpenThemeStore();
+        } symbol:@"paintpalette.fill"],
         [NeedleRow button:@"Change app icon" action:^{
             extern void NeedleOpenIconPicker(void);
             NeedleOpenIconPicker();
@@ -257,7 +266,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
             NeedleShowChangelogNow();
         } symbol:@"sparkles"],
     ];
-    you.footer = @"Wrapped runs on local listening history, logged since you installed Needle.";
+    you.footer = @"Themes override the album-extracted palette with a fixed one.";
 
     self.sections = @[playback, sleep, look, content, you];
 }

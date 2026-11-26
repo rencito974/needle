@@ -51,10 +51,11 @@ static BOOL NeedleAdBlock(void) { return NeedlePrefBool(@"BlockAds", YES); }
     if ([cls containsString:@"Advert"] ||
         [cls containsString:@"AdUnit"] ||
         [cls containsString:@"HomeAds"] ||
-        [cls containsString:@"Marquee"] ||
-        [cls containsString:@"Upsell"] ||
-        [cls containsString:@"Promo"] ||
-        [cls containsString:@"Sponsor"]) {
+        [cls containsString:@"Sponsor"] ||
+        [cls containsString:@"Sponsored"] ||
+        [cls containsString:@"AdPlayback"] ||
+        [cls containsString:@"HomeFeedSponsored"] ||
+        [cls containsString:@"NewMusicRecommendation"]) {
         self.hidden = YES;
         for (NSLayoutConstraint *c in self.constraints) {
             if (c.firstAttribute == NSLayoutAttributeHeight && c.firstItem == self) {
