@@ -6,7 +6,7 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME = Needle
 
 Needle_FILES = Prefs.x Premium.x Shuffle.x Artwork.x Theme.x Lockscreen.x Scrobble.x Settings.x
-Needle_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-nullability-completeness
+Needle_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-nullability-completeness -Wno-arc-performSelector-leaks -Wno-unused-value
 Needle_FRAMEWORKS = UIKit MediaPlayer AVFoundation CoreGraphics ImageIO Foundation
 Needle_LDFLAGS = -framework Security
 
