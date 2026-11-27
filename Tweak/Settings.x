@@ -1221,6 +1221,7 @@ void _NeedleReflowFloatsIfNeeded(void) {
     _NeedleReflowFloatsImpl(w);
 }
 
+__attribute__((unused))
 static void _NeedleReflowFloats(UIWindow *w) {
     _NeedleReflowFloatsImpl(w);
 }
