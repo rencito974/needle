@@ -1249,6 +1249,8 @@ static UIView *_NeedleBuildButton(CGRect frame) {
     return host;
 }
 
+static void _NeedleInstallWindowLongPress(UIWindow *w);
+
 void NeedleInstallFloatingButton(void) {
     UIWindow *target = nil;
     NSArray *scenes = [[UIApplication sharedApplication].connectedScenes allObjects];
@@ -1487,6 +1489,11 @@ static NSInteger _needleActiveNeedleVCCount = 0;
 
 static UILongPressGestureRecognizer *_needleWindowLP = nil;
 
+@interface NeedleSettingsViewController (WindowLP)
++ (void)_needleWindowLongPress:(UILongPressGestureRecognizer *)g;
+@end
+
+@implementation NeedleSettingsViewController (WindowLP)
 + (void)_needleWindowLongPress:(UILongPressGestureRecognizer *)g {
     if (g.state != UIGestureRecognizerStateBegan) return;
     UIWindow *w = (UIWindow *)g.view;
@@ -1498,6 +1505,7 @@ static UILongPressGestureRecognizer *_needleWindowLP = nil;
     extern void NeedleOpenSettings(void);
     NeedleOpenSettings();
 }
+@end
 
 static void _NeedleInstallWindowLongPress(UIWindow *w) {
     if (!w) return;
