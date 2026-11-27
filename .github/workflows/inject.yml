@@ -19,6 +19,10 @@ on:
         description: "Also upload as Needle-Spotify-lite.ipa"
         required: false
         default: "false"
+      copy_as_og:
+        description: "Also build with original com.spotify.client bundle and upload as Needle-Spotify-og.ipa"
+        required: false
+        default: "false"
       skip_primary:
         description: "Skip overwriting Needle-Spotify.ipa"
         required: false
@@ -115,3 +119,17 @@ jobs:
         run: |
           cp work/Needle-Spotify.ipa work/Needle-Spotify-lite.ipa
           gh release upload latest -R ${{ github.repository }} work/Needle-Spotify-lite.ipa --clobber
+
+      - name: Build and publish Needle-Spotify-og.ipa with com.spotify.client bundle
+        if: ${{ inputs.copy_as_og == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd work
+          NEEDLE_VER=$(date -u +%Y.%m.%d.%H%M)
+          cyan -i spotify.ipa -o Needle-Spotify-og.ipa -f Needle-latest.deb -u \
+            -n "Spotify" \
+            -v "$NEEDLE_VER"
+          cd ..
+          python3 .github/scripts/patch_icons.py work/Needle-Spotify-og.ipa
+          gh release upload latest -R ${{ github.repository }} work/Needle-Spotify-og.ipa --clobber
