@@ -96,7 +96,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.18";
+    return @"2.19";
 }
 
 @implementation NeedleSettingsViewController
@@ -392,6 +392,8 @@ static NSString *_NeedleVersionTag(void) {
         [NeedleRow sw:@"Waveform scrubber" key:@"WaveformScrubber" def:NO symbol:@"waveform"],
         [NeedleRow sw:@"Bluetooth badge" key:@"BTBadge" def:YES symbol:@"airpods"],
         [NeedleRow sw:@"Turntable in landscape" key:@"TurntableLandscape" def:YES symbol:@"opticaldisc"],
+        [NeedleRow sw:@"Car mode in landscape" key:@"CarModeLandscape" def:NO symbol:@"car.fill"],
+        [NeedleRow sw:@"Lyric artwork pulse" key:@"LyricArtworkBg" def:YES symbol:@"music.note.list"],
     ];
 
     NeedleSection *content = [NeedleSection new];
@@ -402,6 +404,9 @@ static NSString *_NeedleVersionTag(void) {
         [NeedleRow sw:@"Skip interludes" key:@"SkipInterludes" def:NO symbol:@"forward.end.alt"],
         [NeedleRow sw:@"Skip explicit tracks" key:@"SkipExplicit" def:NO symbol:@"e.square"],
         [NeedleRow sw:@"Tap lyric opens full" key:@"LyricsTapOpensFull" def:YES symbol:@"text.quote"],
+        [NeedleRow sw:@"Hide Podcasts tab" key:@"HidePodcasts" def:NO symbol:@"mic.slash"],
+        [NeedleRow sw:@"Hide Audiobooks tab" key:@"HideAudiobooks" def:NO symbol:@"book.closed"],
+        [NeedleRow sw:@"Hide premium nag" key:@"HidePremiumNag" def:NO symbol:@"nosign.app"],
     ];
 
     NeedleSection *discover = [NeedleSection new];

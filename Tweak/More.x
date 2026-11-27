@@ -1,6 +1,7 @@
 #import <UIKit/UIKit.h>
 #import <CoreImage/CoreImage.h>
 #import <AVFoundation/AVFoundation.h>
+#import <MediaPlayer/MediaPlayer.h>
 #import <objc/runtime.h>
 
 extern UIColor *NeedleCurrentColor(void);
@@ -15,8 +16,21 @@ static NSString *NeedleCurrentTrackURI(void) {
 }
 
 static NSDictionary *NeedleCurrentTrackInfo(void) {
-    if (!_needleCurrentTrackCache) return nil;
-    return [_needleCurrentTrackCache copy];
+    if (_needleCurrentTrackCache && [_needleCurrentTrackCache[@"name"] length] > 0) {
+        return [_needleCurrentTrackCache copy];
+    }
+    NSDictionary *np = [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo;
+    id name = np[MPMediaItemPropertyTitle];
+    if ([name isKindOfClass:[NSString class]] && [(NSString *)name length] > 0) {
+        NSMutableDictionary *m = [NSMutableDictionary new];
+        m[@"name"] = name;
+        id artist = np[MPMediaItemPropertyArtist];
+        id album = np[MPMediaItemPropertyAlbumTitle];
+        if ([artist isKindOfClass:[NSString class]]) m[@"artist"] = artist;
+        if ([album isKindOfClass:[NSString class]]) m[@"album"] = album;
+        return m;
+    }
+    return nil;
 }
 
 static UIImage *NeedleQRFor(NSString *payload) {

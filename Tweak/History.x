@@ -1,5 +1,6 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
+#import <objc/message.h>
 
 extern BOOL NeedlePrefBool(NSString *key, BOOL def);
 extern UIColor *NeedleCurrentColor(void);
@@ -10,6 +11,22 @@ NSMutableDictionary *_needleCurrentTrackCache = nil;
 static NSString *NeedleHistoryPath(void) {
     NSString *doc = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
     return [doc stringByAppendingPathComponent:@"NeedleHistory.plist"];
+}
+
+static NSString *NeedleCachePath(void) {
+    NSString *doc = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
+    return [doc stringByAppendingPathComponent:@"NeedleCurrentTrack.plist"];
+}
+
+void NeedlePersistTrackCache(void) {
+    if (!_needleCurrentTrackCache) return;
+    [_needleCurrentTrackCache writeToFile:NeedleCachePath() atomically:YES];
+}
+
+__attribute__((constructor))
+static void _NeedleLoadTrackCacheOnLaunch(void) {
+    NSDictionary *d = [NSDictionary dictionaryWithContentsOfFile:NeedleCachePath()];
+    if (d) _needleCurrentTrackCache = [d mutableCopy];
 }
 
 static NSMutableArray *_cache = nil;
@@ -86,6 +103,7 @@ void NeedleClearHistory(void) {
     _needleCurrentTrackCache[@"album"] = album ?: @"";
     if ([uri isKindOfClass:[NSString class]]) _needleCurrentTrackCache[@"uri"] = uri;
     else [_needleCurrentTrackCache removeObjectForKey:@"uri"];
+    NeedlePersistTrackCache();
 
     NeedleLogPlay(name ?: @"Unknown", artist ?: @"Unknown", album ?: @"", dur);
 }
@@ -121,6 +139,56 @@ void NeedleSeekPlayerTo(NSTimeInterval seconds) {
                 [inv invoke];
                 return;
             } @catch (NSException *e) {}
+        }
+    }
+}
+
+void NeedlePlayerTogglePlay(void) {
+    id p = _needleSeekPlayer;
+    if (!p) return;
+    @try {
+        if ([p respondsToSelector:@selector(setPaused:)]) {
+            BOOL paused = NO;
+            @try { paused = [[p valueForKey:@"paused"] boolValue]; } @catch (NSException *e) {}
+            NSMethodSignature *sig = [[p class] instanceMethodSignatureForSelector:@selector(setPaused:)];
+            NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+            inv.selector = @selector(setPaused:);
+            [inv setTarget:p];
+            BOOL newVal = !paused;
+            [inv setArgument:&newVal atIndex:2];
+            [inv invoke];
+            return;
+        }
+    } @catch (NSException *e) {}
+    SEL pauseSels[] = {@selector(pause), @selector(pausePlayback)};
+    for (NSUInteger i = 0; i < sizeof(pauseSels) / sizeof(SEL); i++) {
+        if ([p respondsToSelector:pauseSels[i]]) {
+            @try { ((void (*)(id, SEL))objc_msgSend)(p, pauseSels[i]); } @catch (NSException *e) {}
+            return;
+        }
+    }
+}
+
+void NeedlePlayerNext(void) {
+    id p = _needleSeekPlayer;
+    if (!p) return;
+    SEL sels[] = {@selector(skipToNextTrack), @selector(skipNext), @selector(skipToNext), @selector(next)};
+    for (NSUInteger i = 0; i < sizeof(sels) / sizeof(SEL); i++) {
+        if ([p respondsToSelector:sels[i]]) {
+            @try { ((void (*)(id, SEL))objc_msgSend)(p, sels[i]); } @catch (NSException *e) {}
+            return;
+        }
+    }
+}
+
+void NeedlePlayerPrevious(void) {
+    id p = _needleSeekPlayer;
+    if (!p) return;
+    SEL sels[] = {@selector(skipToPreviousTrack), @selector(skipPrevious), @selector(skipToPrevious), @selector(previous)};
+    for (NSUInteger i = 0; i < sizeof(sels) / sizeof(SEL); i++) {
+        if ([p respondsToSelector:sels[i]]) {
+            @try { ((void (*)(id, SEL))objc_msgSend)(p, sels[i]); } @catch (NSException *e) {}
+            return;
         }
     }
 }

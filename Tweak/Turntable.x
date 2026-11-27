@@ -242,6 +242,9 @@ void NeedleCloseTurntable(void) {
     _needleTurntableOverlay = nil;
 }
 
+extern void NeedleOpenCarMode(void);
+extern void NeedleCloseCarMode(void);
+
 %ctor {
     [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
     [[NSNotificationCenter defaultCenter] addObserverForName:UIDeviceOrientationDidChangeNotification
@@ -250,10 +253,17 @@ void NeedleCloseTurntable(void) {
         usingBlock:^(NSNotification *n) {
             UIDeviceOrientation o = [UIDevice currentDevice].orientation;
             BOOL playing = (_needleCurrentTrackCache[@"name"] != nil) && [_needleCurrentTrackCache[@"name"] length] > 0;
-            if (UIDeviceOrientationIsLandscape(o) && NeedlePrefBool(@"TurntableLandscape", YES) && playing) {
-                NeedleOpenTurntable();
+            if (UIDeviceOrientationIsLandscape(o) && playing) {
+                if (NeedlePrefBool(@"CarModeLandscape", NO)) {
+                    NeedleCloseTurntable();
+                    NeedleOpenCarMode();
+                } else if (NeedlePrefBool(@"TurntableLandscape", YES)) {
+                    NeedleCloseCarMode();
+                    NeedleOpenTurntable();
+                }
             } else if (UIDeviceOrientationIsPortrait(o) || o == UIDeviceOrientationPortraitUpsideDown) {
                 NeedleCloseTurntable();
+                NeedleCloseCarMode();
             }
         }];
 }

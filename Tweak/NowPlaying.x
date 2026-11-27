@@ -36,6 +36,11 @@ extern NSMutableDictionary *_needleCurrentTrackCache;
             if ([album isKindOfClass:[NSString class]]) _needleCurrentTrackCache[@"album"] = album;
             [_needleCurrentTrackCache removeObjectForKey:@"uri"];
         }
+        extern void NeedlePersistTrackCache(void);
+        NeedlePersistTrackCache();
+    }
+    if (!m[(NSString *)MPNowPlayingInfoPropertyMediaType]) {
+        m[(NSString *)MPNowPlayingInfoPropertyMediaType] = @(1);
     }
     %orig(m);
 }
