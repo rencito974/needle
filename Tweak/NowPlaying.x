@@ -7,20 +7,11 @@ extern NSMutableDictionary *_needleCurrentTrackCache;
 %hook MPNowPlayingInfoCenter
 - (void)setNowPlayingInfo:(NSDictionary *)info {
     NSMutableDictionary *m = [info mutableCopy] ?: [NSMutableDictionary new];
-    if (!m[(NSString *)MPNowPlayingInfoPropertyExternalContentIdentifier]) {
-        m[(NSString *)MPNowPlayingInfoPropertyExternalContentIdentifier] = @"com.spotify.client";
+    if (!m[@"ExternalContentIdentifier"]) {
+        m[@"ExternalContentIdentifier"] = @"com.spotify.client";
     }
-    if (!m[(NSString *)MPNowPlayingInfoPropertyExternalUserProfileIdentifier]) {
-        m[(NSString *)MPNowPlayingInfoPropertyExternalUserProfileIdentifier] = @"com.spotify.client";
-    }
-    if (!m[(NSString *)MPNowPlayingInfoPropertyPlaybackRate]) {
-        m[(NSString *)MPNowPlayingInfoPropertyPlaybackRate] = @(1.0);
-    }
-    if (!m[(NSString *)MPNowPlayingInfoPropertyDefaultPlaybackRate]) {
-        m[(NSString *)MPNowPlayingInfoPropertyDefaultPlaybackRate] = @(1.0);
-    }
-    if (!m[(NSString *)MPNowPlayingInfoPropertyIsLiveStream]) {
-        m[(NSString *)MPNowPlayingInfoPropertyIsLiveStream] = @NO;
+    if (!m[@"MPNowPlayingInfoPropertyExternalUserProfileIdentifier"]) {
+        m[@"MPNowPlayingInfoPropertyExternalUserProfileIdentifier"] = @"com.spotify.client";
     }
     id artwork = info[MPMediaItemPropertyArtwork];
     if ([artwork isKindOfClass:NSClassFromString(@"MPMediaItemArtwork")]) {
@@ -47,9 +38,6 @@ extern NSMutableDictionary *_needleCurrentTrackCache;
         }
         extern void NeedlePersistTrackCache(void);
         NeedlePersistTrackCache();
-    }
-    if (!m[(NSString *)MPNowPlayingInfoPropertyMediaType]) {
-        m[(NSString *)MPNowPlayingInfoPropertyMediaType] = @(1);
     }
     %orig(m);
 }

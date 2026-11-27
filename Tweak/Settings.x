@@ -117,7 +117,7 @@ static NeedleRow *_NeedleRowWithSubtitle(NeedleRow *r, NSString *sub) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.24";
+    return @"2.25";
 }
 
 @implementation NeedleSettingsViewController
@@ -439,7 +439,6 @@ static NSString *_NeedleVersionTag(void) {
     NeedleSection *privacy = [NeedleSection new];
     privacy.title = @"Privacy";
     privacy.rows = @[
-        WITHSUB([NeedleRow sw:@"Hide Needle in recording" key:@"HideInCapture" def:NO symbol:@"eye.slash.fill"], @"Hides the Needle floating button from screen recordings, mirroring and AirPlay. Single screenshots: iOS gives no pre-event, so the gear still shows."),
         WITHSUB([NeedleRow sw:@"Private listening" key:@"PrivateListening" def:NO symbol:@"theatermasks"], @"Stops this session from feeding into history, streaks, Wrapped."),
     ];
 
