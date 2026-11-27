@@ -96,7 +96,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.19";
+    return @"2.20";
 }
 
 @implementation NeedleSettingsViewController

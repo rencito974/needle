@@ -4,15 +4,15 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.19.0";
+static NSString *const NeedleCurrentVersion = @"2.20.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Current track now persists to disk so the gear > QR / Rating no longer shows 'No track playing' after a restart.\n"
-           "Car mode (Nocturne style): rotate to landscape with Car mode toggle on, get a giant clock, big album art, big playback buttons. Wins over Turntable when both are on.\n"
-           "Hide tabs: toggles to hide Podcasts, Audiobooks and premium nag items from Spotify's tab bar.\n"
-           "Lyric artwork pulse: low opacity album art breathing behind the lyric view instead of the flat background.";
+    return @"Volume boost reworked: Needle now hooks every AVFoundation volume setter (AVAudioMixerNode, AVPlayer, AVAudioPlayer) so whichever audio path Spotify uses, the slider actually applies.\n"
+           "Moving the slider now re-applies the boost to the already playing session, no song skip needed.\n"
+           "If a track still sounds unchanged at 2x+, your system volume is at the cap already; raise the phone volume to 100 percent and the boost has room to grow.\n"
+           "Consolidated build: cache persistence, Car mode, hide tabs, lyric artwork pulse, floating gear + QR + Rating all in one place.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
