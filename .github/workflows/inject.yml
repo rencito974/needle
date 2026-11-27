@@ -15,6 +15,14 @@ on:
         description: "Also upload as Needle-Spotify-safe.ipa"
         required: false
         default: "false"
+      copy_as_lite:
+        description: "Also upload as Needle-Spotify-lite.ipa"
+        required: false
+        default: "false"
+      skip_primary:
+        description: "Skip overwriting Needle-Spotify.ipa"
+        required: false
+        default: "false"
 
 permissions:
   contents: write
@@ -77,6 +85,7 @@ jobs:
           ls -la work/Needle-Spotify.ipa
 
       - name: Publish Needle-Spotify.ipa
+        if: ${{ inputs.skip_primary != 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -98,3 +107,11 @@ jobs:
         run: |
           cp work/Needle-Spotify.ipa work/Needle-Spotify-safe.ipa
           gh release upload latest -R ${{ github.repository }} work/Needle-Spotify-safe.ipa --clobber
+
+      - name: Also publish as Needle-Spotify-lite.ipa (named copy)
+        if: ${{ inputs.copy_as_lite == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp work/Needle-Spotify.ipa work/Needle-Spotify-lite.ipa
+          gh release upload latest -R ${{ github.repository }} work/Needle-Spotify-lite.ipa --clobber
