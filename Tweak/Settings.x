@@ -10,6 +10,8 @@ extern void NeedlePrefSetFloat(NSString *key, float val);
 extern UIColor *NeedleCurrentColor(void);
 extern NSMutableDictionary *_needleCurrentTrackCache;
 
+static UIViewController *_NeedleTopVC(void);
+
 typedef NS_ENUM(NSInteger, NeedleRowKind) {
     NeedleRowSwitch,
     NeedleRowText,
