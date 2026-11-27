@@ -4,13 +4,14 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.23.0";
+static NSString *const NeedleCurrentVersion = @"2.24.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Hide in captures reworked (the previous version hid Spotify itself, which is not what you wanted): the Needle floating gear is now wrapped in a UITextField secureTextEntry canvas when the toggle is on, which iOS blanks in screenshots. During screen recording and mirroring, the gear also gets hidden via UIScreenCapturedDidChangeNotification.\n"
-           "Toggle lives at Settings > Privacy > Hide Needle in captures.";
+    return @"Crash fix: the UITextField secureTextEntry canvas trick I used for screenshot hiding was crashing Spotify on launch on iOS 18. Reverted that wrap.\n"
+           "Hide in recording still works: during screen recording, mirroring or AirPlay, the Needle gear is hidden via UIScreenCapturedDidChangeNotification.\n"
+           "Single screenshots will still show the gear. iOS does not fire a pre-screenshot event, so the only reliable way to block it is the secureTextEntry canvas, which is unstable right now.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {

@@ -117,7 +117,7 @@ static NeedleRow *_NeedleRowWithSubtitle(NeedleRow *r, NSString *sub) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.23";
+    return @"2.24";
 }
 
 @implementation NeedleSettingsViewController
@@ -439,7 +439,7 @@ static NSString *_NeedleVersionTag(void) {
     NeedleSection *privacy = [NeedleSection new];
     privacy.title = @"Privacy";
     privacy.rows = @[
-        WITHSUB([NeedleRow sw:@"Hide Needle in captures" key:@"HideInCapture" def:NO symbol:@"eye.slash.fill"], @"Hides the Needle floating button from screen recordings, mirroring, and single screenshots."),
+        WITHSUB([NeedleRow sw:@"Hide Needle in recording" key:@"HideInCapture" def:NO symbol:@"eye.slash.fill"], @"Hides the Needle floating button from screen recordings, mirroring and AirPlay. Single screenshots: iOS gives no pre-event, so the gear still shows."),
         WITHSUB([NeedleRow sw:@"Private listening" key:@"PrivateListening" def:NO symbol:@"theatermasks"], @"Stops this session from feeding into history, streaks, Wrapped."),
     ];
 
@@ -880,17 +880,17 @@ static NSString *_NeedleVersionTag(void) {
 }
 
 + (void)_needleGearPan:(UIPanGestureRecognizer *)g {
-    UIView *movable = _needleSecureWrap ?: g.view;
-    if (!movable || !movable.superview) return;
-    CGPoint t = [g translationInView:movable.superview];
-    movable.center = CGPointMake(movable.center.x + t.x, movable.center.y + t.y);
-    [g setTranslation:CGPointZero inView:movable.superview];
+    UIView *host = g.view;
+    if (!host || !host.superview) return;
+    CGPoint t = [g translationInView:host.superview];
+    host.center = CGPointMake(host.center.x + t.x, host.center.y + t.y);
+    [g setTranslation:CGPointZero inView:host.superview];
     if (g.state == UIGestureRecognizerStateEnded) {
-        CGRect bounds = movable.superview.bounds;
-        CGFloat edge = movable.frame.size.width;
-        CGFloat x = movable.center.x < bounds.size.width / 2 ? edge / 2 + 14 : bounds.size.width - edge / 2 - 14;
+        CGRect bounds = host.superview.bounds;
+        CGFloat edge = host.frame.size.width;
+        CGFloat x = host.center.x < bounds.size.width / 2 ? edge / 2 + 14 : bounds.size.width - edge / 2 - 14;
         [UIView animateWithDuration:0.25 animations:^{
-            movable.center = CGPointMake(x, movable.center.y);
+            host.center = CGPointMake(x, host.center.y);
         }];
     }
 }
@@ -949,15 +949,6 @@ static UIView *_needleFloatingQR = nil;
 static UIView *_needleFloatingRating = nil;
 static UITextField *_needleSecureWrap = nil;
 static BOOL _needleFloatingHidden = NO;
-
-static UIView *_NeedleGetSecureCanvas(UITextField *tf) {
-    for (UIView *sv in tf.subviews) {
-        if ([NSStringFromClass([sv class]) localizedCaseInsensitiveContainsString:@"canvas"]) {
-            return sv;
-        }
-    }
-    return tf;
-}
 
 __attribute__((unused))
 static BOOL _NeedleTrackIsCached(void) {
@@ -1058,55 +1049,29 @@ void NeedleInstallFloatingButton(void) {
     }
     if (!target) return;
 
-    BOOL wantSecure = NeedlePrefBool(@"HideInCapture", NO);
-    UIView *topMost = _needleSecureWrap ?: _needleFloatingHost;
-    BOOL alreadySecure = (_needleSecureWrap != nil);
-
-    if (topMost && topMost.superview == target && alreadySecure == wantSecure) {
-        [target bringSubviewToFront:topMost];
+    if (_needleFloatingHost && _needleFloatingHost.superview == target) {
+        [target bringSubviewToFront:_needleFloatingHost];
         return;
     }
-
     if (_needleFloatingHost) [_needleFloatingHost removeFromSuperview];
-    if (_needleSecureWrap) [_needleSecureWrap removeFromSuperview];
-    _needleFloatingHost = nil;
-    _needleSecureWrap = nil;
+    if (_needleSecureWrap) { [_needleSecureWrap removeFromSuperview]; _needleSecureWrap = nil; }
 
     CGFloat btnSize = 36;
     CGFloat topInset = target.safeAreaInsets.top > 0 ? target.safeAreaInsets.top : 60;
     CGFloat y = topInset + 80;
     CGRect frame = CGRectMake(target.bounds.size.width - btnSize - 14, y, btnSize, btnSize);
 
-    if (wantSecure) {
-        _needleSecureWrap = [[UITextField alloc] initWithFrame:frame];
-        _needleSecureWrap.secureTextEntry = YES;
-        _needleSecureWrap.userInteractionEnabled = YES;
-        _needleSecureWrap.backgroundColor = [UIColor clearColor];
-        [target addSubview:_needleSecureWrap];
-
-        UIView *canvas = _NeedleGetSecureCanvas(_needleSecureWrap);
-        canvas.userInteractionEnabled = YES;
-        canvas.frame = _needleSecureWrap.bounds;
-        canvas.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        _needleFloatingHost = _NeedleBuildButton(CGRectMake(0, 0, btnSize, btnSize));
-        _needleFloatingHost.hidden = _needleFloatingHidden;
-        [canvas addSubview:_needleFloatingHost];
-        _needleSecureWrap.hidden = _needleFloatingHidden;
-        [target bringSubviewToFront:_needleSecureWrap];
-    } else {
-        _needleFloatingHost = _NeedleBuildButton(frame);
-        _needleFloatingHost.hidden = _needleFloatingHidden;
-        [target addSubview:_needleFloatingHost];
-        [target bringSubviewToFront:_needleFloatingHost];
-    }
+    _needleFloatingHost = _NeedleBuildButton(frame);
+    _needleFloatingHost.hidden = _needleFloatingHidden;
+    [target addSubview:_needleFloatingHost];
+    [target bringSubviewToFront:_needleFloatingHost];
 
     CABasicAnimation *pulse = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
     pulse.fromValue = @0.3;
     pulse.toValue = @1.0;
     pulse.duration = 0.4;
     pulse.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
-    UIView *topView = _needleSecureWrap ?: _needleFloatingHost;
-    [topView.layer addAnimation:pulse forKey:@"spawn"];
+    [_needleFloatingHost.layer addAnimation:pulse forKey:@"spawn"];
 }
 
 __attribute__((unused))
@@ -1230,11 +1195,10 @@ static void _NeedleReflowFloats(UIWindow *w) {
 - (void)layoutSubviews {
     %orig;
     if (self.isKeyWindow && self.windowLevel <= UIWindowLevelNormal + 10) {
-        UIView *topMost = _needleSecureWrap ?: _needleFloatingHost;
-        if (!topMost || topMost.superview != self) {
+        if (!_needleFloatingHost || _needleFloatingHost.superview != self) {
             NeedleInstallFloatingButton();
         } else {
-            [self bringSubviewToFront:topMost];
+            [self bringSubviewToFront:_needleFloatingHost];
         }
     }
 }
