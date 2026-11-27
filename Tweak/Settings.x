@@ -354,7 +354,6 @@ static NSString *_NeedleVersionTag(void) {
         [NeedleRow sw:@"Crossfade 20 s" key:@"CrossfadeMax" def:NO symbol:@"waveform.path.ecg"],
         [NeedleRow sw:@"Gapless within album" key:@"GaplessAlbum" def:YES symbol:@"forward.end"],
         [NeedleRow sw:@"Force 320 kbps" key:@"HighBitrate" def:NO symbol:@"4k.tv"],
-        [NeedleRow slider:@"Volume boost" key:@"VolumeBoostAmount" def:1.0 min:0.5 max:3.5 suffix:@"x" symbol:@"speaker.wave.3.fill"],
         [NeedleRow sw:@"Free-tier unlocks" key:@"FreeUnlocks" def:NO symbol:@"crown.fill"],
     ];
 

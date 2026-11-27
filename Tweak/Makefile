@@ -16,11 +16,6 @@ Needle_FILES += Probe.x
 Needle_CFLAGS += -DNEEDLE_PROBE
 endif
 
-ifeq ($(NEEDLE_BOOST),1)
-Needle_FILES += AudioSafe.x fishhook/fishhook.c
-Needle_FRAMEWORKS += AudioToolbox
-endif
-
 include $(THEOS_MAKE_PATH)/tweak.mk
 
 SUBPROJECTS += Preferences
