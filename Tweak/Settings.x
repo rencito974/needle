@@ -11,6 +11,7 @@ extern UIColor *NeedleCurrentColor(void);
 extern NSMutableDictionary *_needleCurrentTrackCache;
 
 static UIViewController *_NeedleTopVC(void);
+static UITextField *_needleSecureWrap;
 
 typedef NS_ENUM(NSInteger, NeedleRowKind) {
     NeedleRowSwitch,
