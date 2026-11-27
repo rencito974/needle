@@ -4,15 +4,18 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.26.0";
+static NSString *const NeedleCurrentVersion = @"2.27.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Full revert of Settings.x to the v2.21 commit, which was the last version you confirmed opens without crashing.\n"
-           "Lost: Regram-style InsetGrouped cards, row subtitles, About section, Privacy section.\n"
-           "Kept: everything else from v2.19-v2.21 (Car mode, Turntable, Album wall, Rating, Forgotten, hide tabs, lyric pulse, floating gear menu, volume boost slider, all icon themes).\n"
-           "Confirm this opens, then I rebuild the new UI more carefully on top.";
+    return @"Regram-style Settings: InsetGrouped cards, row subtitles, native grouped headers.\n"
+           "About section: Needle and Spotify version, bundle, GitHub, update, what's new.\n"
+           "Privacy section: Hide in screen recording, Private listening.\n"
+           "Hide in captures: black overlay with eye-slash icon when the phone is recording or mirroring.\n"
+           "Playlist cloner: floating Clone chip on any playlist page, opens share-to-add or copies URI.\n"
+           "Queue long-press: Move to top and Remove from any queue row.\n"
+           "Volume boost dropped: no safe way to boost above 100 percent from a tweak.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {

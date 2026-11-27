@@ -17,11 +17,14 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     NeedleRowText,
     NeedleRowButton,
     NeedleRowSlider,
+    NeedleRowInfo,
 };
 
 @interface NeedleRow : NSObject
 @property (nonatomic, assign) NeedleRowKind kind;
 @property (nonatomic, copy) NSString *label;
+@property (nonatomic, copy) NSString *subtitle;
+@property (nonatomic, copy) NSString *detailValue;
 @property (nonatomic, copy) NSString *prefKey;
 @property (nonatomic, copy) NSString *placeholder;
 @property (nonatomic, copy) NSString *symbol;
@@ -72,14 +75,29 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
     r.symbol = sym;
     return r;
 }
++ (instancetype)info:(NSString *)label value:(NSString *)value symbol:(NSString *)sym {
+    NeedleRow *r = [NeedleRow new];
+    r.kind = NeedleRowInfo;
+    r.label = label;
+    r.detailValue = value;
+    r.symbol = sym;
+    return r;
+}
 @end
 
 @interface NeedleSection : NSObject
 @property (nonatomic, copy) NSString *title;
+@property (nonatomic, copy) NSString *footer;
 @property (nonatomic, strong) NSArray<NeedleRow *> *rows;
 @end
 @implementation NeedleSection
 @end
+
+static NeedleRow *_NeedleRowWithSubtitle(NeedleRow *r, NSString *sub) {
+    r.subtitle = sub;
+    return r;
+}
+#define WITHSUB(row, sub) _NeedleRowWithSubtitle((row), (sub))
 
 @interface NeedleHeroView : UIView
 @property (nonatomic, strong) UILabel *trackLabel;
@@ -98,7 +116,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.26";
+    return @"2.27";
 }
 
 @implementation NeedleSettingsViewController
@@ -127,13 +145,19 @@ static NSString *_NeedleVersionTag(void) {
 
     CGFloat w = self.view.bounds.size.width;
 
-    self.table = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStylePlain];
+    UITableViewStyle style = UITableViewStyleGrouped;
+    if (@available(iOS 13.0, *)) style = UITableViewStyleInsetGrouped;
+    self.table = [[UITableView alloc] initWithFrame:self.view.bounds style:style];
     self.table.backgroundColor = [UIColor clearColor];
     self.table.separatorStyle = UITableViewCellSeparatorStyleNone;
-    self.table.rowHeight = 54;
+    self.table.rowHeight = UITableViewAutomaticDimension;
+    self.table.estimatedRowHeight = 64;
     self.table.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.table.contentInset = UIEdgeInsetsMake(0, 0, 80, 0);
     self.table.showsVerticalScrollIndicator = NO;
+    if ([self.table respondsToSelector:@selector(setSectionHeaderTopPadding:)]) {
+        [self.table setValue:@0 forKey:@"sectionHeaderTopPadding"];
+    }
     self.table.dataSource = self;
     self.table.delegate = self;
     [self.view addSubview:self.table];
@@ -349,12 +373,13 @@ static NSString *_NeedleVersionTag(void) {
     NeedleSection *playback = [NeedleSection new];
     playback.title = @"Playback";
     playback.rows = @[
-        [NeedleRow sw:@"Fisher Yates shuffle" key:@"RealShuffle" def:YES symbol:@"shuffle"],
-        [NeedleRow sw:@"Shuffle lock" key:@"ShuffleLock" def:NO symbol:@"lock.shield"],
-        [NeedleRow sw:@"Crossfade 20 s" key:@"CrossfadeMax" def:NO symbol:@"waveform.path.ecg"],
-        [NeedleRow sw:@"Gapless within album" key:@"GaplessAlbum" def:YES symbol:@"forward.end"],
-        [NeedleRow sw:@"Force 320 kbps" key:@"HighBitrate" def:NO symbol:@"4k.tv"],
-        [NeedleRow sw:@"Free-tier unlocks" key:@"FreeUnlocks" def:NO symbol:@"crown.fill"],
+        WITHSUB([NeedleRow sw:@"Fisher Yates shuffle" key:@"RealShuffle" def:YES symbol:@"shuffle"], @"Genuinely random instead of the usual Spotify sort."),
+        WITHSUB([NeedleRow sw:@"Shuffle lock" key:@"ShuffleLock" def:NO symbol:@"lock.shield"], @"Never auto-disable shuffle between plays."),
+        WITHSUB([NeedleRow sw:@"Crossfade 20 s" key:@"CrossfadeMax" def:NO symbol:@"waveform.path.ecg"], @"Lifts the hidden 12 s cap on Spotify's crossfade."),
+        WITHSUB([NeedleRow sw:@"Gapless within album" key:@"GaplessAlbum" def:YES symbol:@"forward.end"], @"No silent gap between tracks of the same album."),
+        WITHSUB([NeedleRow sw:@"Force 320 kbps" key:@"HighBitrate" def:NO symbol:@"4k.tv"], @"Pretend you're Premium so streaming goes to highest quality."),
+        WITHSUB([NeedleRow sw:@"Free-tier unlocks" key:@"FreeUnlocks" def:NO symbol:@"crown.fill"], @"Flips client flags to pretend you're Premium (unlimited skips, on-demand play)."),
+        WITHSUB([NeedleRow sw:@"Queue long-press menu" key:@"QueueGestures" def:YES symbol:@"hand.tap"], @"Long-press any queue row for Move to top / Remove."),
     ];
 
     extern void NeedleStartSleepTimer(NSInteger minutes);
@@ -400,14 +425,22 @@ static NSString *_NeedleVersionTag(void) {
     NeedleSection *content = [NeedleSection new];
     content.title = @"Content";
     content.rows = @[
-        [NeedleRow sw:@"Block all ads" key:@"BlockAds" def:YES symbol:@"nosign"],
-        [NeedleRow sw:@"DNS analytics block" key:@"DNSBlock" def:YES symbol:@"shield.lefthalf.filled"],
-        [NeedleRow sw:@"Skip interludes" key:@"SkipInterludes" def:NO symbol:@"forward.end.alt"],
-        [NeedleRow sw:@"Skip explicit tracks" key:@"SkipExplicit" def:NO symbol:@"e.square"],
-        [NeedleRow sw:@"Tap lyric opens full" key:@"LyricsTapOpensFull" def:YES symbol:@"text.quote"],
-        [NeedleRow sw:@"Hide Podcasts tab" key:@"HidePodcasts" def:NO symbol:@"mic.slash"],
-        [NeedleRow sw:@"Hide Audiobooks tab" key:@"HideAudiobooks" def:NO symbol:@"book.closed"],
-        [NeedleRow sw:@"Hide premium nag" key:@"HidePremiumNag" def:NO symbol:@"nosign.app"],
+        WITHSUB([NeedleRow sw:@"Block all ads" key:@"BlockAds" def:YES symbol:@"nosign"], @"Mutes and skips both audio and visual ads."),
+        WITHSUB([NeedleRow sw:@"DNS analytics block" key:@"DNSBlock" def:YES symbol:@"shield.lefthalf.filled"], @"Drops requests to pixel.spotify.com, adeventtracker, scdn analytics."),
+        WITHSUB([NeedleRow sw:@"Skip interludes" key:@"SkipInterludes" def:NO symbol:@"forward.end.alt"], @"Auto-skips tracks under 45 seconds."),
+        WITHSUB([NeedleRow sw:@"Skip explicit tracks" key:@"SkipExplicit" def:NO symbol:@"e.square"], @"Auto-skips anything marked explicit."),
+        WITHSUB([NeedleRow sw:@"Tap lyric opens full" key:@"LyricsTapOpensFull" def:YES symbol:@"text.quote"], @"Single lyric tap goes straight to full lyrics."),
+        WITHSUB([NeedleRow sw:@"Hide Podcasts tab" key:@"HidePodcasts" def:NO symbol:@"mic.slash"], @"Removes Podcasts items from the tab bar."),
+        WITHSUB([NeedleRow sw:@"Hide Audiobooks tab" key:@"HideAudiobooks" def:NO symbol:@"book.closed"], @"Removes Audiobooks items from the tab bar."),
+        WITHSUB([NeedleRow sw:@"Hide premium nag" key:@"HidePremiumNag" def:NO symbol:@"nosign.app"], @"Hides the 'Upgrade to Premium' tab entries."),
+        WITHSUB([NeedleRow sw:@"Playlist cloner chip" key:@"PlaylistCloner" def:YES symbol:@"square.on.square"], @"Floating Clone button on any playlist page. Opens share-to-add or copies URI."),
+    ];
+
+    NeedleSection *privacy = [NeedleSection new];
+    privacy.title = @"Privacy";
+    privacy.rows = @[
+        WITHSUB([NeedleRow sw:@"Hide in screen recording" key:@"HideInCapture" def:NO symbol:@"eye.slash.fill"], @"Covers Spotify with a black screen whenever the phone is recording or mirrored."),
+        WITHSUB([NeedleRow sw:@"Private listening" key:@"PrivateListening" def:NO symbol:@"theatermasks"], @"Stops this session from feeding into history, streaks, Wrapped."),
     ];
 
     NeedleSection *discover = [NeedleSection new];
@@ -462,29 +495,46 @@ static NSString *_NeedleVersionTag(void) {
     NeedleSection *you = [NeedleSection new];
     you.title = @"You";
     you.rows = @[
-        [NeedleRow button:@"Live Wrapped" action:^{
+        WITHSUB([NeedleRow button:@"Live Wrapped" action:^{
             extern void NeedleOpenWrapped(void);
             NeedleOpenWrapped();
-        } symbol:@"chart.bar.fill"],
-        [NeedleRow button:@"Album wall" action:^{
+        } symbol:@"chart.bar.fill"], @"Up-to-date Wrapped built from your real history."),
+        WITHSUB([NeedleRow button:@"Album wall" action:^{
             extern void NeedleOpenAlbumWall(void);
             NeedleOpenAlbumWall();
-        } symbol:@"square.grid.2x2.fill"],
-        [NeedleRow button:@"Themes" action:^{
+        } symbol:@"square.grid.2x2.fill"], @"Every album you played this year as a mosaic."),
+        WITHSUB([NeedleRow button:@"Themes" action:^{
             extern void NeedleOpenThemeStore(void);
             NeedleOpenThemeStore();
-        } symbol:@"paintpalette.fill"],
-        [NeedleRow button:@"Change app icon" action:^{
+        } symbol:@"paintpalette.fill"], @"Override the album-extracted palette with a fixed one."),
+        WITHSUB([NeedleRow button:@"Change app icon" action:^{
             extern void NeedleOpenIconPicker(void);
             NeedleOpenIconPicker();
-        } symbol:@"app.fill"],
-        [NeedleRow button:@"What's new" action:^{
-            extern void NeedleShowChangelogNow(void);
-            NeedleShowChangelogNow();
-        } symbol:@"sparkles"],
+        } symbol:@"app.fill"], @"Six themed Spotify silhouettes you can swap on the home screen."),
     ];
 
-    self.sections = @[discover, playback, look, content, sleep, you];
+    NeedleSection *about = [NeedleSection new];
+    about.title = @"About";
+    NSString *spotifyVer = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"unknown";
+    NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier] ?: @"com.spotify.client";
+    about.rows = @[
+        [NeedleRow info:@"Needle version" value:[NSString stringWithFormat:@"v%@", _NeedleVersionTag()] symbol:@"info.circle.fill"],
+        [NeedleRow info:@"Spotify version" value:spotifyVer symbol:@"music.note"],
+        [NeedleRow info:@"Bundle" value:bundleId symbol:@"number"],
+        WITHSUB([NeedleRow button:@"What's new" action:^{
+            extern void NeedleShowChangelogNow(void);
+            NeedleShowChangelogNow();
+        } symbol:@"sparkles"], @"Recent changelog for this build."),
+        WITHSUB([NeedleRow button:@"GitHub repo" action:^{
+            [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://github.com/rencito974/needle"] options:@{} completionHandler:nil];
+        } symbol:@"chevron.left.forwardslash.chevron.right"], @"Source, issues, release notes."),
+        WITHSUB([NeedleRow button:@"Check for updates" action:^{
+            [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://github.com/rencito974/needle/releases/latest"] options:@{} completionHandler:nil];
+        } symbol:@"arrow.down.circle.fill"], @"Jump to the latest release page."),
+    ];
+    about.footer = [NSString stringWithFormat:@"Needle v%@ running on Spotify %@. Built by Renzo.", _NeedleVersionTag(), spotifyVer];
+
+    self.sections = @[discover, playback, look, content, privacy, sleep, you, about];
 }
 
 - (void)toast:(NSString *)text {
@@ -511,39 +561,35 @@ static NSString *_NeedleVersionTag(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)t { return self.sections.count; }
 - (NSInteger)tableView:(UITableView *)t numberOfRowsInSection:(NSInteger)s { return self.sections[s].rows.count; }
 
-- (CGFloat)tableView:(UITableView *)t heightForRowAtIndexPath:(NSIndexPath *)ip {
-    NeedleRow *row = self.sections[ip.section].rows[ip.row];
-    return row.kind == NeedleRowSlider ? 80 : 54;
-}
-
 - (UITableViewCell *)tableView:(UITableView *)t cellForRowAtIndexPath:(NSIndexPath *)ip {
     NeedleRow *row = self.sections[ip.section].rows[ip.row];
     NSInteger count = self.sections[ip.section].rows.count;
     BOOL last = ip.row == count - 1;
 
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-    cell.backgroundColor = [UIColor clearColor];
+    cell.backgroundColor = [UIColor colorWithWhite:0.10 alpha:1];
     cell.textLabel.hidden = YES;
     cell.imageView.hidden = YES;
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
 
     UIView *content = cell.contentView;
     BOOL isSlider = row.kind == NeedleRowSlider;
+    BOOL hasSubtitle = row.subtitle.length > 0;
 
     if (row.symbol) {
-        UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:19 weight:UIImageSymbolWeightMedium];
+        UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:16 weight:UIImageSymbolWeightMedium];
         UIImageView *iv = [[UIImageView alloc] initWithImage:
             [UIImage systemImageNamed:row.symbol withConfiguration:cfg]];
-        iv.tintColor = NeedleCurrentColor();
+        iv.tintColor = [UIColor colorWithWhite:1 alpha:0.75];
         iv.contentMode = UIViewContentModeCenter;
         iv.translatesAutoresizingMaskIntoConstraints = NO;
         [content addSubview:iv];
         [NSLayoutConstraint activateConstraints:@[
-            [iv.widthAnchor constraintEqualToConstant:28],
-            [iv.heightAnchor constraintEqualToConstant:28],
-            [iv.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:22],
+            [iv.widthAnchor constraintEqualToConstant:26],
+            [iv.heightAnchor constraintEqualToConstant:26],
+            [iv.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:18],
         ]];
-        if (isSlider) {
+        if (isSlider || hasSubtitle) {
             [iv.topAnchor constraintEqualToAnchor:content.topAnchor constant:14].active = YES;
         } else {
             [iv.centerYAnchor constraintEqualToAnchor:content.centerYAnchor].active = YES;
@@ -553,16 +599,33 @@ static NSString *_NeedleVersionTag(void) {
     UILabel *label = [[UILabel alloc] init];
     label.text = row.label;
     label.textColor = [UIColor whiteColor];
-    label.font = [UIFont systemFontOfSize:16 weight:UIFontWeightRegular];
+    label.font = [UIFont systemFontOfSize:16 weight:UIFontWeightSemibold];
     label.translatesAutoresizingMaskIntoConstraints = NO;
     [content addSubview:label];
     [NSLayoutConstraint activateConstraints:@[
-        [label.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:row.symbol ? 62 : 22],
+        [label.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:row.symbol ? 56 : 18],
     ]];
-    if (isSlider) {
-        [label.topAnchor constraintEqualToAnchor:content.topAnchor constant:14].active = YES;
+    if (isSlider || hasSubtitle) {
+        [label.topAnchor constraintEqualToAnchor:content.topAnchor constant:12].active = YES;
     } else {
         [label.centerYAnchor constraintEqualToAnchor:content.centerYAnchor].active = YES;
+    }
+
+    UILabel *subLbl = nil;
+    if (hasSubtitle) {
+        subLbl = [[UILabel alloc] init];
+        subLbl.text = row.subtitle;
+        subLbl.textColor = [UIColor colorWithWhite:1 alpha:0.52];
+        subLbl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightRegular];
+        subLbl.numberOfLines = 0;
+        subLbl.translatesAutoresizingMaskIntoConstraints = NO;
+        [content addSubview:subLbl];
+        [NSLayoutConstraint activateConstraints:@[
+            [subLbl.leadingAnchor constraintEqualToAnchor:label.leadingAnchor],
+            [subLbl.topAnchor constraintEqualToAnchor:label.bottomAnchor constant:3],
+            [subLbl.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-70],
+            [subLbl.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-12],
+        ]];
     }
 
     if (row.kind == NeedleRowSwitch) {
@@ -606,8 +669,21 @@ static NSString *_NeedleVersionTag(void) {
         chev.translatesAutoresizingMaskIntoConstraints = NO;
         [content addSubview:chev];
         [NSLayoutConstraint activateConstraints:@[
-            [chev.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-22],
+            [chev.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-18],
             [chev.centerYAnchor constraintEqualToAnchor:content.centerYAnchor],
+        ]];
+    } else if (row.kind == NeedleRowInfo) {
+        UILabel *val = [[UILabel alloc] init];
+        val.text = row.detailValue;
+        val.textColor = [UIColor colorWithWhite:1 alpha:0.6];
+        val.font = [UIFont monospacedDigitSystemFontOfSize:13 weight:UIFontWeightMedium];
+        val.textAlignment = NSTextAlignmentRight;
+        val.translatesAutoresizingMaskIntoConstraints = NO;
+        [content addSubview:val];
+        [NSLayoutConstraint activateConstraints:@[
+            [val.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-18],
+            [val.centerYAnchor constraintEqualToAnchor:content.centerYAnchor],
+            [val.widthAnchor constraintLessThanOrEqualToConstant:200],
         ]];
     } else if (row.kind == NeedleRowSlider) {
         float cur = NeedlePrefFloat(row.prefKey, row.defaultFloat);
@@ -649,17 +725,23 @@ static NSString *_NeedleVersionTag(void) {
 
     if (!last) {
         UIView *sep = [[UIView alloc] init];
-        sep.backgroundColor = [UIColor colorWithWhite:1 alpha:0.055];
+        sep.backgroundColor = [UIColor colorWithWhite:1 alpha:0.08];
         sep.translatesAutoresizingMaskIntoConstraints = NO;
         [content addSubview:sep];
         [NSLayoutConstraint activateConstraints:@[
-            [sep.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:row.symbol ? 62 : 22],
-            [sep.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-18],
+            [sep.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:row.symbol ? 56 : 18],
+            [sep.trailingAnchor constraintEqualToAnchor:content.trailingAnchor],
             [sep.bottomAnchor constraintEqualToAnchor:content.bottomAnchor],
             [sep.heightAnchor constraintEqualToConstant:0.5],
         ]];
     }
     return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)t heightForRowAtIndexPath:(NSIndexPath *)ip {
+    NeedleRow *row = self.sections[ip.section].rows[ip.row];
+    if (row.kind == NeedleRowSlider) return 80;
+    return UITableViewAutomaticDimension;
 }
 
 - (void)switchFlipped:(UISwitch *)sw {
@@ -678,40 +760,30 @@ static NSString *_NeedleVersionTag(void) {
     if (key) NeedlePrefSetFloat(key, v);
 }
 
-- (UIView *)tableView:(UITableView *)t viewForHeaderInSection:(NSInteger)s {
-    NeedleSection *sec = self.sections[s];
-    if (!sec.title.length) return nil;
-    CGFloat w = t.bounds.size.width;
-    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, 54)];
-    header.backgroundColor = [UIColor clearColor];
-
-    UIView *bar = [[UIView alloc] initWithFrame:CGRectMake(22, 34, 14, 2)];
-    bar.backgroundColor = NeedleCurrentColor();
-    bar.layer.cornerRadius = 1;
-    [header addSubview:bar];
-
-    UILabel *lbl = [[UILabel alloc] init];
-    NSMutableAttributedString *a = [[NSMutableAttributedString alloc] initWithString:[sec.title uppercaseString]];
-    [a addAttribute:NSKernAttributeName value:@2.0 range:NSMakeRange(0, a.length)];
-    [a addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:11 weight:UIFontWeightHeavy] range:NSMakeRange(0, a.length)];
-    [a addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithWhite:1 alpha:0.52] range:NSMakeRange(0, a.length)];
-    lbl.attributedText = a;
-    lbl.frame = CGRectMake(44, 24, w - 60, 22);
-    lbl.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    [header addSubview:lbl];
-    return header;
+- (NSString *)tableView:(UITableView *)t titleForHeaderInSection:(NSInteger)s {
+    return self.sections[s].title;
 }
 
-- (CGFloat)tableView:(UITableView *)t heightForHeaderInSection:(NSInteger)s {
-    return 54;
+- (NSString *)tableView:(UITableView *)t titleForFooterInSection:(NSInteger)s {
+    return self.sections[s].footer;
 }
 
-- (CGFloat)tableView:(UITableView *)t heightForFooterInSection:(NSInteger)s {
-    return 12;
+- (void)tableView:(UITableView *)t willDisplayHeaderView:(UIView *)view forSection:(NSInteger)s {
+    if ([view isKindOfClass:[UITableViewHeaderFooterView class]]) {
+        UITableViewHeaderFooterView *h = (UITableViewHeaderFooterView *)view;
+        h.textLabel.textColor = [UIColor colorWithWhite:1 alpha:0.5];
+        h.textLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
+        h.textLabel.text = self.sections[s].title;
+    }
 }
 
-- (UIView *)tableView:(UITableView *)t viewForFooterInSection:(NSInteger)s {
-    return nil;
+- (void)tableView:(UITableView *)t willDisplayFooterView:(UIView *)view forSection:(NSInteger)s {
+    if ([view isKindOfClass:[UITableViewHeaderFooterView class]]) {
+        UITableViewHeaderFooterView *f = (UITableViewHeaderFooterView *)view;
+        f.textLabel.textColor = [UIColor colorWithWhite:1 alpha:0.38];
+        f.textLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
+        f.textLabel.numberOfLines = 0;
+    }
 }
 
 - (BOOL)textFieldShouldReturn:(UITextField *)tf {
