@@ -1,43 +1,36 @@
 {
-  "name": "Needle",
-  "subtitle": "Spotify tweak by Renzo",
-  "description": "Needle adds QR share, playlist cloner, queue long-press, Regram-style Settings, 30 themes, Car mode, Turntable, Album wall, Rating, Forgotten favorites, lockscreen art enlargement and more to Spotify on iOS.",
-  "iconURL": "https://avatars.githubusercontent.com/u/155409865?v=4",
-  "headerURL": "https://avatars.githubusercontent.com/u/155409865?v=4",
-  "website": "https://github.com/rencito974/needle",
-  "tintColor": "1DB954",
-  "featuredApps": ["com.spotify.client", "com.needle.spotify"],
-  "apps": [
+  "version": "1.0",
+  "sourceName": "Needle",
+  "sourceAuthor": "Renzo",
+  "sourceExportEnable": true,
+  "sourceLinkTitle": "GitHub",
+  "sourceLinkUrl": "https://github.com/rencito974/needle",
+  "sourceImage": "https://avatars.githubusercontent.com/u/155409865?v=4",
+  "sourceUpdateTime": "2026-11-27T11:30:00+0000",
+  "sourceDescription": "Needle Spotify tweak by Renzo. QR share, playlist cloner, queue long-press, Regram-style Settings, 30 themes, Car mode, Turntable, Album wall, Rating, Forgotten favorites, lockscreen art enlargement and more.",
+  "appCategories": [
+    "Tweak"
+  ],
+  "appRepositories": [
     {
-      "name": "Spotify (Needle, OG bundle)",
-      "bundleIdentifier": "com.spotify.client",
-      "developerName": "Spotify / Needle",
-      "subtitle": "Lockscreen tap works",
-      "iconURL": "https://avatars.githubusercontent.com/u/155409865?v=4",
-      "tintColor": "1DB954",
-      "version": "2.31.0",
-      "versionDate": "2026-11-27",
-      "versionDescription": "v2.31 - keeps the original com.spotify.client bundle so iOS lockscreen Now Playing tap opens Spotify. Install over the original Spotify. Updates in place as long as you keep installing the og build.",
-      "downloadURL": "https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify-og.ipa",
-      "size": 146283061,
-      "localizedDescription": "Spotify with Needle tweak. Keeps com.spotify.client bundle so iOS treats it like the real Spotify for lockscreen Now Playing tap and other system integrations.",
-      "screenshotURLs": []
+      "appType": "SELF_SIGN",
+      "appCateIndex": 0,
+      "appUpdateTime": "2026-11-27T11:30:00+0000",
+      "appName": "Spotify (Needle, OG bundle)",
+      "appVersion": "2.31.0",
+      "appImage": "https://avatars.githubusercontent.com/u/155409865?v=4",
+      "appPackage": "https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify-og.ipa",
+      "appDescription": "Spotify with Needle tweak.\nKeeps the original com.spotify.client bundle, best match for system integrations.\nInstall over the real Spotify (delete the Needle-bundled one first if you already had it).\n\nRecent: Regram-style Settings, 30 themes, Playlist cloner, Queue long-press, Recognize redesign."
     },
     {
-      "name": "Spotify (Needle)",
-      "bundleIdentifier": "com.needle.spotify",
-      "developerName": "Spotify / Needle",
-      "subtitle": "In-place Gbox updates",
-      "iconURL": "https://avatars.githubusercontent.com/u/155409865?v=4",
-      "tintColor": "1DB954",
-      "version": "2.31.0",
-      "versionDate": "2026-11-27",
-      "versionDescription": "v2.31 - counter-based gear visibility, window-level long-press, Regram-style Settings redesign, 30 themes, playlist cloner, queue long-press, Recognize redesign.",
-      "downloadURL": "https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa",
-      "size": 146282567,
-      "localizedDescription": "Spotify with Needle tweak. Uses com.needle.spotify bundle so Gbox resigns over the previous install without needing to delete first. Lockscreen Now Playing tap does not open the app on this bundle.",
-      "screenshotURLs": []
+      "appType": "SELF_SIGN",
+      "appCateIndex": 0,
+      "appUpdateTime": "2026-11-27T11:30:00+0000",
+      "appName": "Spotify (Needle)",
+      "appVersion": "2.31.0",
+      "appImage": "https://avatars.githubusercontent.com/u/155409865?v=4",
+      "appPackage": "https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa",
+      "appDescription": "Spotify with Needle tweak.\nUses the com.needle.spotify bundle so Gbox updates in place without deleting.\nLockscreen Now Playing tap does not open the app on this bundle.\n\nRecent: Regram-style Settings, 30 themes, Playlist cloner, Queue long-press, Recognize redesign."
     }
-  ],
-  "news": []
+  ]
 }
