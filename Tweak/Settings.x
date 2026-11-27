@@ -118,7 +118,7 @@ static NeedleRow *_NeedleRowWithSubtitle(NeedleRow *r, NSString *sub) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.30";
+    return @"2.31";
 }
 
 @implementation NeedleSettingsViewController
@@ -1250,13 +1250,6 @@ static UIView *_NeedleBuildButton(CGRect frame) {
 }
 
 void NeedleInstallFloatingButton(void) {
-    if (NeedlePrefBool(@"HideFloatingGear", NO)) {
-        if (_needleFloatingHost) {
-            [_needleFloatingHost removeFromSuperview];
-            _needleFloatingHost = nil;
-        }
-        return;
-    }
     UIWindow *target = nil;
     NSArray *scenes = [[UIApplication sharedApplication].connectedScenes allObjects];
     for (UIScene *s in scenes) {
@@ -1270,6 +1263,16 @@ void NeedleInstallFloatingButton(void) {
         }
     }
     if (!target) return;
+
+    _NeedleInstallWindowLongPress(target);
+
+    if (NeedlePrefBool(@"HideFloatingGear", NO)) {
+        if (_needleFloatingHost) {
+            [_needleFloatingHost removeFromSuperview];
+            _needleFloatingHost = nil;
+        }
+        return;
+    }
 
     if (_needleFloatingHost && _needleFloatingHost.superview == target) {
         [target bringSubviewToFront:_needleFloatingHost];
@@ -1445,13 +1448,19 @@ static void NeedleStartInstallWatchdog(void) {
     }];
 }
 
+static NSInteger _needleActiveNeedleVCCount = 0;
+
 %hook UIViewController
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
     NSString *cls = NSStringFromClass([self class]);
     if ([cls hasPrefix:@"Needle"]) {
+        _needleActiveNeedleVCCount++;
         NeedleHideFloatingButton();
         return;
+    }
+    if (_needleActiveNeedleVCCount <= 0) {
+        NeedleShowFloatingButton();
     }
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NeedleInstallFloatingButton();
@@ -1464,13 +1473,48 @@ static void NeedleStartInstallWatchdog(void) {
     %orig;
     NSString *cls = NSStringFromClass([self class]);
     if ([cls hasPrefix:@"Needle"]) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            NeedleShowFloatingButton();
-            NeedleInstallFloatingButton();
-        });
+        _needleActiveNeedleVCCount--;
+        if (_needleActiveNeedleVCCount < 0) _needleActiveNeedleVCCount = 0;
+        if (_needleActiveNeedleVCCount == 0) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                NeedleShowFloatingButton();
+                NeedleInstallFloatingButton();
+            });
+        }
     }
 }
 %end
+
+static UILongPressGestureRecognizer *_needleWindowLP = nil;
+
++ (void)_needleWindowLongPress:(UILongPressGestureRecognizer *)g {
+    if (g.state != UIGestureRecognizerStateBegan) return;
+    UIWindow *w = (UIWindow *)g.view;
+    CGPoint pt = [g locationInView:w];
+    CGFloat h = w.bounds.size.height;
+    if (pt.y < h - 160) return;
+    UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+    [fb impactOccurred];
+    extern void NeedleOpenSettings(void);
+    NeedleOpenSettings();
+}
+
+static void _NeedleInstallWindowLongPress(UIWindow *w) {
+    if (!w) return;
+    static char _wlpKey;
+    if (objc_getAssociatedObject(w, &_wlpKey)) return;
+    UILongPressGestureRecognizer *lp = [[UILongPressGestureRecognizer alloc]
+        initWithTarget:[NeedleSettingsViewController class]
+        action:@selector(_needleWindowLongPress:)];
+    lp.minimumPressDuration = 0.6;
+    lp.cancelsTouchesInView = NO;
+    lp.delaysTouchesBegan = NO;
+    lp.delaysTouchesEnded = NO;
+    lp.delegate = [_NeedleGestureBridge shared];
+    [w addGestureRecognizer:lp];
+    objc_setAssociatedObject(w, &_wlpKey, lp, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    _needleWindowLP = lp;
+}
 
 %hook UIWindow
 - (void)motionEnded:(UIEventSubtype)motion withEvent:(UIEvent *)event {
@@ -1487,6 +1531,8 @@ static void NeedleStartInstallWatchdog(void) {
         object:nil
         queue:[NSOperationQueue mainQueue]
         usingBlock:^(NSNotification *n) {
+            _needleActiveNeedleVCCount = 0;
+            _needleFloatingHidden = NO;
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 NeedleInstallFloatingButton();
                 NeedleInstallFloatingQR();

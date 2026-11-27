@@ -4,16 +4,14 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.30.0";
+static NSString *const NeedleCurrentVersion = @"2.31.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Long-press on the now-playing bar re-wired: shorter 0.45s hold, simultaneous recognition delegate so Spotify's own gesture no longer eats it, and a triple-tap fallback on the same bar.\n"
-           "Also hooking SPTNowPlayingView: long-press and triple-tap work on the expanded player too.\n"
-           "Search bar in Settings: Regram-style filter across every section, matches labels and subtitles.\n"
-           "Themes catalog: 30 total, new entries include Aurora, Midnight, Mint, Lavender, Sky, Iris, Coral, Teal, Lime, Platinum, Neon, Vinyl, Fire, Grape, Moss and more.\n"
-           "Lockscreen tap: still investigating. Tell me what happens on tap (opens nothing, opens Music, flashes) so I can narrow it down.";
+    return @"Floating button recovery: counter-based visibility replacing the prefix-check that could get stuck off. Resets on every app activate so the gear always comes back.\n"
+           "Window-level long-press: a backup gesture lives on the key window itself, 0.6s hold on the bottom strip of the screen opens Settings whether the bar-level one fires or not.\n"
+           "Lockscreen tap: adding AssetURL spotify:// did not fix it. This path needs private entitlements Apple Music has and sideloaded apps do not. Realistic workarounds: swipe or long-press the lockscreen widget, home-screen spotify:// shortcut, or Control Center quick launch.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
