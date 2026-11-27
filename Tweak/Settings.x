@@ -116,7 +116,7 @@ static NeedleRow *_NeedleRowWithSubtitle(NeedleRow *r, NSString *sub) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.27";
+    return @"2.28";
 }
 
 @implementation NeedleSettingsViewController
@@ -420,6 +420,7 @@ static NSString *_NeedleVersionTag(void) {
         [NeedleRow sw:@"Turntable in landscape" key:@"TurntableLandscape" def:YES symbol:@"opticaldisc"],
         [NeedleRow sw:@"Car mode in landscape" key:@"CarModeLandscape" def:NO symbol:@"car.fill"],
         [NeedleRow sw:@"Lyric artwork pulse" key:@"LyricArtworkBg" def:YES symbol:@"music.note.list"],
+        WITHSUB([NeedleRow sw:@"Hide floating button" key:@"HideFloatingGear" def:NO symbol:@"circle.slash"], @"Removes the top-right gear. Long-press the now-playing bar to open Needle."),
     ];
 
     NeedleSection *content = [NeedleSection new];
@@ -840,33 +841,140 @@ static NSString *_NeedleVersionTag(void) {
     UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
     [fb impactOccurred];
 
-    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:@"Needle" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+    UIView *anchor = g.view;
+    if (!anchor || !anchor.superview) return;
+    UIWindow *win = (UIWindow *)anchor.superview;
+    if (![win isKindOfClass:[UIWindow class]]) win = anchor.window;
+    if (!win) return;
+
+    for (UIView *v in [win.subviews copy]) {
+        if (v.tag == 0x4E474D54) [v removeFromSuperview];
+    }
 
     BOOL trackCached = (_needleCurrentTrackCache[@"name"] != nil) && [_needleCurrentTrackCache[@"name"] length] > 0;
 
+    NSMutableArray *items = [NSMutableArray new];
     if (trackCached) {
-        [sheet addAction:[UIAlertAction actionWithTitle:@"QR share this song" style:UIAlertActionStyleDefault handler:^(UIAlertAction *_){
-            extern void NeedleOpenQRShare(void);
-            NeedleOpenQRShare();
-        }]];
-        [sheet addAction:[UIAlertAction actionWithTitle:@"Rate this song" style:UIAlertActionStyleDefault handler:^(UIAlertAction *_){
-            extern void NeedleOpenRating(void);
-            NeedleOpenRating();
-        }]];
+        [items addObject:@{@"t": @"QR share", @"s": @"qrcode", @"a": @"qr"}];
+        [items addObject:@{@"t": @"Rate song", @"s": @"star.fill", @"a": @"rate"}];
     }
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Open Settings" style:UIAlertActionStyleDefault handler:^(UIAlertAction *_){
-        extern void NeedleOpenSettings(void);
-        NeedleOpenSettings();
-    }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    [items addObject:@{@"t": @"Settings", @"s": @"slider.horizontal.3", @"a": @"settings"}];
 
-    if (sheet.popoverPresentationController) {
-        sheet.popoverPresentationController.sourceView = g.view;
-        sheet.popoverPresentationController.sourceRect = g.view.bounds;
+    UIView *dim = [[UIView alloc] initWithFrame:win.bounds];
+    dim.backgroundColor = [UIColor colorWithWhite:0 alpha:0.0];
+    dim.tag = 0x4E474D54;
+    dim.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [win addSubview:dim];
+
+    CGFloat itemSize = 72;
+    CGFloat gap = 10;
+    CGFloat pad = 14;
+    NSInteger n = items.count;
+    CGFloat popW = n * itemSize + (n - 1) * gap + pad * 2;
+    CGFloat popH = itemSize + 42 + pad * 2;
+
+    CGPoint anchorCenter = [anchor convertPoint:CGPointMake(anchor.bounds.size.width / 2, anchor.bounds.size.height) toView:win];
+    CGFloat popX = anchorCenter.x - popW + anchor.bounds.size.width / 2 + 10;
+    if (popX < 14) popX = 14;
+    if (popX + popW > win.bounds.size.width - 14) popX = win.bounds.size.width - 14 - popW;
+    CGFloat popY = anchorCenter.y + 10;
+
+    UIView *pop = [[UIView alloc] initWithFrame:CGRectMake(popX, popY, popW, popH)];
+    pop.layer.cornerRadius = 22;
+    pop.layer.borderWidth = 0.5;
+    pop.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.18].CGColor;
+    pop.layer.shadowColor = [UIColor blackColor].CGColor;
+    pop.layer.shadowOffset = CGSizeMake(0, 10);
+    pop.layer.shadowRadius = 22;
+    pop.layer.shadowOpacity = 0.45;
+    pop.clipsToBounds = NO;
+    [dim addSubview:pop];
+
+    UIVisualEffectView *vfx = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterialDark]];
+    vfx.frame = pop.bounds;
+    vfx.layer.cornerRadius = 22;
+    vfx.layer.masksToBounds = YES;
+    vfx.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [pop addSubview:vfx];
+
+    UIView *accentWash = [[UIView alloc] initWithFrame:pop.bounds];
+    accentWash.backgroundColor = [NeedleCurrentColor() colorWithAlphaComponent:0.10];
+    accentWash.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [vfx.contentView addSubview:accentWash];
+
+    for (NSInteger i = 0; i < n; i++) {
+        NSDictionary *it = items[i];
+        CGFloat x = pad + i * (itemSize + gap);
+        UIView *cell = [[UIView alloc] initWithFrame:CGRectMake(x, pad, itemSize, itemSize + 42)];
+
+        UIView *circle = [[UIView alloc] initWithFrame:CGRectMake(0, 0, itemSize, itemSize)];
+        circle.backgroundColor = [NeedleCurrentColor() colorWithAlphaComponent:0.18];
+        circle.layer.cornerRadius = itemSize / 2;
+        circle.layer.borderWidth = 0.5;
+        circle.layer.borderColor = [NeedleCurrentColor() colorWithAlphaComponent:0.55].CGColor;
+        [cell addSubview:circle];
+
+        UIImageView *iv = [[UIImageView alloc] initWithImage:
+            [UIImage systemImageNamed:it[@"s"] withConfiguration:
+                [UIImageSymbolConfiguration configurationWithPointSize:26 weight:UIImageSymbolWeightBold]]];
+        iv.tintColor = [UIColor whiteColor];
+        iv.contentMode = UIViewContentModeCenter;
+        iv.frame = circle.bounds;
+        [circle addSubview:iv];
+
+        UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(-8, itemSize + 6, itemSize + 16, 24)];
+        lbl.text = it[@"t"];
+        lbl.textColor = [UIColor whiteColor];
+        lbl.font = [UIFont systemFontOfSize:12 weight:UIFontWeightBold];
+        lbl.textAlignment = NSTextAlignmentCenter;
+        [cell addSubview:lbl];
+
+        cell.tag = i + 1;
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]
+            initWithTarget:[NeedleSettingsViewController class] action:@selector(_needleMenuCellTap:)];
+        [cell addGestureRecognizer:tap];
+        objc_setAssociatedObject(cell, "_needleAction", it[@"a"], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(cell, "_needleDim", dim, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [vfx.contentView addSubview:cell];
     }
 
-    UIViewController *top = _NeedleTopVC();
-    if (top) [top presentViewController:sheet animated:YES completion:nil];
+    pop.transform = CGAffineTransformMakeScale(0.4, 0.4);
+    pop.alpha = 0;
+    [UIView animateWithDuration:0.25 delay:0 usingSpringWithDamping:0.72 initialSpringVelocity:0.9 options:0 animations:^{
+        pop.transform = CGAffineTransformIdentity;
+        pop.alpha = 1;
+        dim.backgroundColor = [UIColor colorWithWhite:0 alpha:0.18];
+    } completion:nil];
+
+    UITapGestureRecognizer *outTap = [[UITapGestureRecognizer alloc]
+        initWithTarget:[NeedleSettingsViewController class] action:@selector(_needleMenuDismiss:)];
+    [dim addGestureRecognizer:outTap];
+    objc_setAssociatedObject(outTap, "_needleDim", dim, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
++ (void)_needleMenuCellTap:(UITapGestureRecognizer *)g {
+    UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+    [fb impactOccurred];
+    NSString *action = objc_getAssociatedObject(g.view, "_needleAction");
+    UIView *dim = objc_getAssociatedObject(g.view, "_needleDim");
+    [UIView animateWithDuration:0.18 animations:^{
+        g.view.transform = CGAffineTransformMakeScale(0.9, 0.9);
+        dim.alpha = 0;
+    } completion:^(BOOL _){
+        [dim removeFromSuperview];
+        if ([action isEqualToString:@"qr"]) { extern void NeedleOpenQRShare(void); NeedleOpenQRShare(); }
+        else if ([action isEqualToString:@"rate"]) { extern void NeedleOpenRating(void); NeedleOpenRating(); }
+        else if ([action isEqualToString:@"settings"]) { extern void NeedleOpenSettings(void); NeedleOpenSettings(); }
+    }];
+}
+
++ (void)_needleMenuDismiss:(UITapGestureRecognizer *)g {
+    UIView *dim = g.view;
+    CGPoint loc = [g locationInView:dim];
+    for (UIView *sub in dim.subviews) {
+        if (CGRectContainsPoint(sub.frame, loc)) return;
+    }
+    [UIView animateWithDuration:0.18 animations:^{ dim.alpha = 0; } completion:^(BOOL _){ [dim removeFromSuperview]; }];
 }
 
 + (void)_needleQRFloatTap:(UITapGestureRecognizer *)g {
@@ -1034,6 +1142,13 @@ static UIView *_NeedleBuildButton(CGRect frame) {
 }
 
 void NeedleInstallFloatingButton(void) {
+    if (NeedlePrefBool(@"HideFloatingGear", NO)) {
+        if (_needleFloatingHost) {
+            [_needleFloatingHost removeFromSuperview];
+            _needleFloatingHost = nil;
+        }
+        return;
+    }
     UIWindow *target = nil;
     NSArray *scenes = [[UIApplication sharedApplication].connectedScenes allObjects];
     for (UIScene *s in scenes) {
@@ -1225,12 +1340,27 @@ static void NeedleStartInstallWatchdog(void) {
 %hook UIViewController
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
+    NSString *cls = NSStringFromClass([self class]);
+    if ([cls hasPrefix:@"Needle"]) {
+        NeedleHideFloatingButton();
+        return;
+    }
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NeedleInstallFloatingButton();
         NeedleInstallFloatingQR();
         NeedleInstallFloatingRating();
         _NeedleSyncGearVisibility();
     });
+}
+- (void)viewDidDisappear:(BOOL)animated {
+    %orig;
+    NSString *cls = NSStringFromClass([self class]);
+    if ([cls hasPrefix:@"Needle"]) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            NeedleShowFloatingButton();
+            NeedleInstallFloatingButton();
+        });
+    }
 }
 %end
 

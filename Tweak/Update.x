@@ -4,18 +4,16 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.27.0";
+static NSString *const NeedleCurrentVersion = @"2.28.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Regram-style Settings: InsetGrouped cards, row subtitles, native grouped headers.\n"
-           "About section: Needle and Spotify version, bundle, GitHub, update, what's new.\n"
-           "Privacy section: Hide in screen recording, Private listening.\n"
-           "Hide in captures: black overlay with eye-slash icon when the phone is recording or mirroring.\n"
-           "Playlist cloner: floating Clone chip on any playlist page, opens share-to-add or copies URI.\n"
-           "Queue long-press: Move to top and Remove from any queue row.\n"
-           "Volume boost dropped: no safe way to boost above 100 percent from a tweak.";
+    return @"Gear menu: tap the floating button for a soft popover with icon circles instead of the old action sheet.\n"
+           "Hide floating gear: new toggle in Look; the top-right gear goes away and long-pressing the now-playing bar opens Needle.\n"
+           "Gear auto-hides in Needle: whenever any Needle screen is up the floating buttons step out of the way.\n"
+           "Recognize redesigned: ripple rings, a glowing core, a real audio level meter on the waveform bars, and a dot cycle so you know it's actually listening.\n"
+           "What's new sheet rebuilt: per-row icons, headline with supporting line, animated hero and glowing continue button.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
@@ -41,98 +39,219 @@ static UIViewController *_NeedleTopVisibleVC(void) {
 @implementation NeedleChangelogSheet
 - (void)loadView {
     UIView *root = [[UIView alloc] initWithFrame:UIScreen.mainScreen.bounds];
-    root.backgroundColor = [UIColor colorWithWhite:0.04 alpha:1.0];
+    root.backgroundColor = [UIColor colorWithWhite:0.03 alpha:1.0];
     self.view = root;
 }
+
+static NSString *_NeedleIconForLine(NSString *line) {
+    NSString *l = [line lowercaseString];
+    if ([l containsString:@"settings"] || [l containsString:@"regram"] || [l containsString:@"card"]) return @"slider.horizontal.3";
+    if ([l containsString:@"about"]) return @"info.circle.fill";
+    if ([l containsString:@"privacy"] || [l containsString:@"hide"] || [l containsString:@"captur"]) return @"eye.slash.fill";
+    if ([l containsString:@"playlist"] || [l containsString:@"clone"]) return @"square.on.square";
+    if ([l containsString:@"queue"]) return @"line.3.horizontal.decrease.circle.fill";
+    if ([l containsString:@"volume"] || [l containsString:@"boost"]) return @"speaker.wave.2.fill";
+    if ([l containsString:@"recognize"]) return @"waveform.badge.magnifyingglass";
+    if ([l containsString:@"lyric"]) return @"text.quote";
+    if ([l containsString:@"car"]) return @"car.fill";
+    if ([l containsString:@"turntable"]) return @"opticaldisc";
+    if ([l containsString:@"rate"] || [l containsString:@"rating"]) return @"star.fill";
+    if ([l containsString:@"album"]) return @"square.grid.2x2.fill";
+    return @"sparkle";
+}
+
+static NSString *_NeedleTitleForLine(NSString *line, NSString **outBody) {
+    NSRange colonRange = [line rangeOfString:@":"];
+    if (colonRange.location == NSNotFound) {
+        if (outBody) *outBody = line;
+        return @"New";
+    }
+    NSString *head = [[line substringToIndex:colonRange.location] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+    NSString *tail = [[line substringFromIndex:colonRange.location + 1] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+    if (outBody) *outBody = tail.length ? tail : head;
+    return head.length ? head : @"New";
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     CGFloat w = self.view.bounds.size.width;
+    CGFloat h = self.view.bounds.size.height;
+    UIColor *accent = NeedleCurrentColor();
 
     CAGradientLayer *bg = [CAGradientLayer layer];
-    UIColor *accent = NeedleCurrentColor();
-    bg.colors = @[(id)[accent colorWithAlphaComponent:0.35].CGColor, (id)[UIColor colorWithWhite:0.04 alpha:1.0].CGColor];
-    bg.locations = @[@0.0, @0.55];
+    bg.colors = @[(id)[accent colorWithAlphaComponent:0.45].CGColor,
+                  (id)[accent colorWithAlphaComponent:0.08].CGColor,
+                  (id)[UIColor colorWithWhite:0.03 alpha:1.0].CGColor];
+    bg.locations = @[@0.0, @0.28, @0.6];
     bg.frame = self.view.bounds;
     [self.view.layer insertSublayer:bg atIndex:0];
 
-    UIView *logo = [[UIView alloc] initWithFrame:CGRectMake(24, 68, 64, 64)];
-    logo.backgroundColor = NeedleCurrentColor();
-    logo.layer.cornerRadius = 16;
-    logo.layer.shadowColor = NeedleCurrentColor().CGColor;
-    logo.layer.shadowOffset = CGSizeMake(0, 6);
-    logo.layer.shadowRadius = 18;
-    logo.layer.shadowOpacity = 0.6;
+    for (NSInteger i = 0; i < 5; i++) {
+        CAShapeLayer *blob = [CAShapeLayer layer];
+        CGFloat size = 160 + (i * 22);
+        CGPoint c = CGPointMake(w - 60 + i * 6, 110 - i * 2);
+        UIBezierPath *p = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(c.x - size/2, c.y - size/2, size, size)];
+        blob.path = p.CGPath;
+        blob.fillColor = [UIColor clearColor].CGColor;
+        blob.strokeColor = [[accent colorWithAlphaComponent:0.18 - i * 0.03] CGColor];
+        blob.lineWidth = 1.0;
+        [self.view.layer addSublayer:blob];
+    }
+
+    UIButton *close = [UIButton buttonWithType:UIButtonTypeSystem];
+    close.frame = CGRectMake(w - 56, 58, 36, 36);
+    close.backgroundColor = [UIColor colorWithWhite:0 alpha:0.45];
+    close.layer.cornerRadius = 18;
+    close.layer.borderWidth = 0.5;
+    close.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.18].CGColor;
+    [close setImage:[UIImage systemImageNamed:@"xmark"
+        withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:13 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
+    close.tintColor = [UIColor whiteColor];
+    [close addTarget:self action:@selector(dismissSelf) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:close];
+
+    UIView *logo = [[UIView alloc] initWithFrame:CGRectMake(24, 80, 72, 72)];
+    logo.backgroundColor = accent;
+    logo.layer.cornerRadius = 20;
+    logo.layer.shadowColor = accent.CGColor;
+    logo.layer.shadowOffset = CGSizeMake(0, 10);
+    logo.layer.shadowRadius = 22;
+    logo.layer.shadowOpacity = 0.75;
     UIImageView *logoIcon = [[UIImageView alloc] initWithImage:
         [UIImage systemImageNamed:@"sparkles" withConfiguration:
-            [UIImageSymbolConfiguration configurationWithPointSize:28 weight:UIImageSymbolWeightBold]]];
+            [UIImageSymbolConfiguration configurationWithPointSize:30 weight:UIImageSymbolWeightBold]]];
     logoIcon.tintColor = [UIColor whiteColor];
     logoIcon.contentMode = UIViewContentModeCenter;
     logoIcon.frame = logo.bounds;
     [logo addSubview:logoIcon];
     [self.view addSubview:logo];
 
-    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(24, 150, w - 48, 36)];
+    CABasicAnimation *breathe = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
+    breathe.fromValue = @0.96;
+    breathe.toValue = @1.04;
+    breathe.duration = 2.0;
+    breathe.autoreverses = YES;
+    breathe.repeatCount = HUGE_VALF;
+    breathe.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+    [logo.layer addAnimation:breathe forKey:@"breathe"];
+
+    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(24, 170, w - 48, 44)];
     title.text = @"What's new";
     title.textColor = [UIColor whiteColor];
-    title.font = [UIFont systemFontOfSize:30 weight:UIFontWeightBold];
+    title.font = [UIFont systemFontOfSize:36 weight:UIFontWeightBlack];
     [self.view addSubview:title];
 
-    UILabel *ver = [[UILabel alloc] initWithFrame:CGRectMake(24, 188, w - 48, 20)];
-    ver.text = [NSString stringWithFormat:@"Needle %@", self.version];
-    ver.textColor = [UIColor colorWithWhite:1.0 alpha:0.55];
-    ver.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
-    [self.view addSubview:ver];
+    UIView *verPill = [[UIView alloc] initWithFrame:CGRectMake(24, 220, 120, 26)];
+    verPill.backgroundColor = [accent colorWithAlphaComponent:0.2];
+    verPill.layer.cornerRadius = 13;
+    verPill.layer.borderWidth = 0.5;
+    verPill.layer.borderColor = [accent colorWithAlphaComponent:0.6].CGColor;
+    UILabel *verLbl = [[UILabel alloc] initWithFrame:verPill.bounds];
+    verLbl.text = [NSString stringWithFormat:@"Needle %@", self.version];
+    verLbl.textColor = [UIColor whiteColor];
+    verLbl.font = [UIFont systemFontOfSize:12 weight:UIFontWeightHeavy];
+    verLbl.textAlignment = NSTextAlignmentCenter;
+    [verPill addSubview:verLbl];
+    CGSize sz = [verLbl.text sizeWithAttributes:@{NSFontAttributeName: verLbl.font}];
+    CGRect vp = verPill.frame;
+    vp.size.width = sz.width + 22;
+    verPill.frame = vp;
+    verLbl.frame = verPill.bounds;
+    [self.view addSubview:verPill];
 
     UIScrollView *scroll = [[UIScrollView alloc] initWithFrame:
-        CGRectMake(0, 230, w, self.view.bounds.size.height - 310)];
+        CGRectMake(0, 268, w, h - 268 - 96)];
     scroll.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    scroll.showsVerticalScrollIndicator = NO;
+    scroll.contentInset = UIEdgeInsetsMake(8, 0, 20, 0);
     [self.view addSubview:scroll];
 
     NSArray *lines = [self.body componentsSeparatedByString:@"\n"];
-    CGFloat y = 8;
+    CGFloat y = 0;
+    NSInteger idx = 0;
     for (NSString *raw in lines) {
         NSString *line = [raw stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
         if (!line.length) continue;
 
-        UIView *row = [[UIView alloc] initWithFrame:CGRectMake(24, y, w - 48, 44)];
+        NSString *body = nil;
+        NSString *head = _NeedleTitleForLine(line, &body);
+        NSString *sym = _NeedleIconForLine(line);
 
-        UIView *dot = [[UIView alloc] initWithFrame:CGRectMake(0, 10, 6, 6)];
-        dot.backgroundColor = NeedleCurrentColor();
-        dot.layer.cornerRadius = 3;
-        [row addSubview:dot];
+        UIView *card = [[UIView alloc] initWithFrame:CGRectMake(20, y, w - 40, 88)];
+        card.backgroundColor = [UIColor colorWithWhite:1 alpha:0.06];
+        card.layer.cornerRadius = 18;
+        card.layer.borderWidth = 0.5;
+        card.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.1].CGColor;
 
-        UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(18, 0, w - 48 - 18, 44)];
-        lbl.text = line;
-        lbl.textColor = [UIColor whiteColor];
-        lbl.font = [UIFont systemFontOfSize:15.5 weight:UIFontWeightMedium];
-        lbl.numberOfLines = 0;
-        [lbl sizeToFit];
-        CGRect f = lbl.frame;
-        f.size.width = w - 48 - 18;
-        f.origin.x = 18;
-        f.origin.y = 0;
-        lbl.frame = f;
-        [row addSubview:lbl];
+        UIView *iconBg = [[UIView alloc] initWithFrame:CGRectMake(16, 16, 44, 44)];
+        iconBg.backgroundColor = [accent colorWithAlphaComponent:0.22];
+        iconBg.layer.cornerRadius = 12;
+        iconBg.layer.borderWidth = 0.5;
+        iconBg.layer.borderColor = [accent colorWithAlphaComponent:0.55].CGColor;
+        UIImageView *iv = [[UIImageView alloc] initWithImage:
+            [UIImage systemImageNamed:sym withConfiguration:
+                [UIImageSymbolConfiguration configurationWithPointSize:18 weight:UIImageSymbolWeightBold]]];
+        iv.tintColor = [UIColor whiteColor];
+        iv.contentMode = UIViewContentModeCenter;
+        iv.frame = iconBg.bounds;
+        [iconBg addSubview:iv];
+        [card addSubview:iconBg];
 
-        CGFloat rowH = MAX(24, lbl.frame.size.height) + 14;
-        row.frame = CGRectMake(24, y, w - 48, rowH);
-        [scroll addSubview:row];
-        y += rowH;
+        UILabel *headLbl = [[UILabel alloc] initWithFrame:CGRectMake(72, 12, w - 40 - 86, 22)];
+        headLbl.text = head;
+        headLbl.textColor = [UIColor whiteColor];
+        headLbl.font = [UIFont systemFontOfSize:15 weight:UIFontWeightBold];
+        [card addSubview:headLbl];
+
+        UILabel *bodyLbl = [[UILabel alloc] initWithFrame:CGRectMake(72, 34, w - 40 - 86, 48)];
+        bodyLbl.text = body ?: line;
+        bodyLbl.textColor = [UIColor colorWithWhite:1 alpha:0.65];
+        bodyLbl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
+        bodyLbl.numberOfLines = 0;
+        [bodyLbl sizeToFit];
+        CGRect bf = bodyLbl.frame;
+        bf.size.width = w - 40 - 86;
+        bf.origin.x = 72;
+        bf.origin.y = 34;
+        bodyLbl.frame = bf;
+        [card addSubview:bodyLbl];
+
+        CGFloat cardH = MAX(76, bodyLbl.frame.size.height + 50);
+        card.frame = CGRectMake(20, y, w - 40, cardH);
+        [scroll addSubview:card];
+
+        card.alpha = 0;
+        card.transform = CGAffineTransformMakeTranslation(0, 14);
+        [UIView animateWithDuration:0.42 delay:0.08 + idx * 0.06 usingSpringWithDamping:0.9 initialSpringVelocity:0.7 options:0 animations:^{
+            card.alpha = 1;
+            card.transform = CGAffineTransformIdentity;
+        } completion:nil];
+
+        y += cardH + 10;
+        idx++;
     }
     scroll.contentSize = CGSizeMake(w, y + 20);
 
     UIButton *done = [UIButton buttonWithType:UIButtonTypeSystem];
-    done.frame = CGRectMake(24, self.view.bounds.size.height - 72, w - 48, 54);
+    done.frame = CGRectMake(24, h - 80, w - 48, 56);
     done.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth;
-    done.backgroundColor = NeedleCurrentColor();
-    done.layer.cornerRadius = 16;
+    done.backgroundColor = accent;
+    done.layer.cornerRadius = 18;
+    done.layer.shadowColor = accent.CGColor;
+    done.layer.shadowOffset = CGSizeMake(0, 8);
+    done.layer.shadowRadius = 20;
+    done.layer.shadowOpacity = 0.55;
     [done setTitle:@"Continue" forState:UIControlStateNormal];
     [done setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     done.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightBold];
     [done addTarget:self action:@selector(dismissSelf) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:done];
 }
-- (void)dismissSelf { [self dismissViewControllerAnimated:YES completion:nil]; }
+- (void)dismissSelf {
+    UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+    [fb impactOccurred];
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
 @end
 
 static void NeedleShowChangelogSheet(void) {
