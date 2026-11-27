@@ -171,7 +171,7 @@ static void _NeedleReapplyBoost(void) {
 
 static void _NeedleInstallAuspHook(void) {
     if (_needle_ausp_installed) return;
-    if (!NeedlePrefBool(@"VolumeBoostEnabled", NO)) return;
+    if (NeedlePrefFloat(@"VolumeBoostAmount", 1.0f) <= 1.01f) return;
     @try {
         void *handle = dlopen("/System/Library/Frameworks/AudioToolbox.framework/AudioToolbox", RTLD_NOW);
         if (!handle) return;
@@ -194,7 +194,6 @@ static void _NeedleInstallAuspHook(void) {
             if (![key isKindOfClass:[NSString class]]) return;
             if ([key isEqualToString:@"VolumeBoostAmount"]) {
                 _NeedleReapplyBoost();
-            } else if ([key isEqualToString:@"VolumeBoostEnabled"]) {
                 dispatch_async(dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0), ^{ _NeedleInstallAuspHook(); });
             }
         }];
