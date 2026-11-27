@@ -7,6 +7,14 @@ on:
         description: "Direct download URL to the decrypted Spotify IPA (leave blank to pull from the spotify-cache release)"
         required: false
         default: ""
+      copy_as_rich:
+        description: "Also upload as Needle-Spotify-rich.ipa"
+        required: false
+        default: "false"
+      copy_as_safe:
+        description: "Also upload as Needle-Spotify-safe.ipa"
+        required: false
+        default: "false"
 
 permissions:
   contents: write
@@ -75,3 +83,19 @@ jobs:
         run: |
           gh release upload latest -R ${{ github.repository }} work/Needle-Spotify.ipa --clobber
           gh release view latest -R ${{ github.repository }} --json assets --jq '.assets[] | .name + " " + (.size|tostring)'
+
+      - name: Also publish as Needle-Spotify-rich.ipa (named copy)
+        if: ${{ inputs.copy_as_rich == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp work/Needle-Spotify.ipa work/Needle-Spotify-rich.ipa
+          gh release upload latest -R ${{ github.repository }} work/Needle-Spotify-rich.ipa --clobber
+
+      - name: Also publish as Needle-Spotify-safe.ipa (named copy)
+        if: ${{ inputs.copy_as_safe == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp work/Needle-Spotify.ipa work/Needle-Spotify-safe.ipa
+          gh release upload latest -R ${{ github.repository }} work/Needle-Spotify-safe.ipa --clobber
