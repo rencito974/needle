@@ -4,13 +4,16 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.29.0";
+static NSString *const NeedleCurrentVersion = @"2.30.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Lockscreen tap fixed: was pointing iOS at com.apple.Music, now points at the real bundle so tapping the lockscreen player opens Spotify again.\n"
-           "External identifiers: also now reflect the resigned bundle instead of a hard-coded com.spotify.client.";
+    return @"Long-press on the now-playing bar re-wired: shorter 0.45s hold, simultaneous recognition delegate so Spotify's own gesture no longer eats it, and a triple-tap fallback on the same bar.\n"
+           "Also hooking SPTNowPlayingView: long-press and triple-tap work on the expanded player too.\n"
+           "Search bar in Settings: Regram-style filter across every section, matches labels and subtitles.\n"
+           "Themes catalog: 30 total, new entries include Aurora, Midnight, Mint, Lavender, Sky, Iris, Coral, Teal, Lime, Platinum, Neon, Vinyl, Fire, Grape, Moss and more.\n"
+           "Lockscreen tap: still investigating. Tell me what happens on tap (opens nothing, opens Music, flashes) so I can narrow it down.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {

@@ -13,12 +13,51 @@ static NSArray *NeedleThemeCatalog(void) {
         @{@"name": @"Sunset", @"key": @"Sunset", @"colors": @[
             [UIColor colorWithRed:1.0 green:0.45 blue:0.2 alpha:1],
             [UIColor colorWithRed:0.95 green:0.2 blue:0.4 alpha:1]]},
+        @{@"name": @"Midnight", @"key": @"Midnight", @"colors": @[
+            [UIColor colorWithRed:0.25 green:0.22 blue:0.75 alpha:1],
+            [UIColor colorWithRed:0.1 green:0.08 blue:0.4 alpha:1]]},
+        @{@"name": @"Aurora", @"key": @"Aurora", @"colors": @[
+            [UIColor colorWithRed:0.0 green:0.85 blue:0.65 alpha:1],
+            [UIColor colorWithRed:0.35 green:0.3 blue:0.85 alpha:1]]},
+        @{@"name": @"Ember", @"key": @"Ember", @"colors": @[
+            [UIColor colorWithRed:0.95 green:0.3 blue:0.15 alpha:1],
+            [UIColor colorWithRed:0.75 green:0.1 blue:0.0 alpha:1]]},
+        @{@"name": @"Mint", @"key": @"Mint", @"colors": @[[UIColor colorWithRed:0.35 green:0.9 blue:0.65 alpha:1]]},
+        @{@"name": @"Lavender", @"key": @"Lavender", @"colors": @[[UIColor colorWithRed:0.7 green:0.55 blue:0.95 alpha:1]]},
+        @{@"name": @"Rose", @"key": @"Rose", @"colors": @[
+            [UIColor colorWithRed:0.95 green:0.35 blue:0.55 alpha:1],
+            [UIColor colorWithRed:0.75 green:0.15 blue:0.35 alpha:1]]},
+        @{@"name": @"Sky", @"key": @"Sky", @"colors": @[[UIColor colorWithRed:0.35 green:0.7 blue:0.95 alpha:1]]},
+        @{@"name": @"Iris", @"key": @"Iris", @"colors": @[
+            [UIColor colorWithRed:0.45 green:0.35 blue:0.95 alpha:1],
+            [UIColor colorWithRed:0.25 green:0.4 blue:0.85 alpha:1]]},
+        @{@"name": @"Terracotta", @"key": @"Terracotta", @"colors": @[[UIColor colorWithRed:0.8 green:0.42 blue:0.25 alpha:1]]},
+        @{@"name": @"Emerald", @"key": @"Emerald", @"colors": @[[UIColor colorWithRed:0.0 green:0.68 blue:0.4 alpha:1]]},
+        @{@"name": @"Coral", @"key": @"Coral", @"colors": @[[UIColor colorWithRed:1.0 green:0.5 blue:0.45 alpha:1]]},
+        @{@"name": @"Teal", @"key": @"Teal", @"colors": @[[UIColor colorWithRed:0.1 green:0.6 blue:0.65 alpha:1]]},
+        @{@"name": @"Peach", @"key": @"Peach", @"colors": @[[UIColor colorWithRed:1.0 green:0.7 blue:0.5 alpha:1]]},
+        @{@"name": @"Lime", @"key": @"Lime", @"colors": @[[UIColor colorWithRed:0.7 green:0.9 blue:0.25 alpha:1]]},
+        @{@"name": @"Charcoal", @"key": @"Charcoal", @"colors": @[[UIColor colorWithWhite:0.35 alpha:1]]},
+        @{@"name": @"Platinum", @"key": @"Platinum", @"colors": @[[UIColor colorWithWhite:0.88 alpha:1]]},
         @{@"name": @"Mono", @"key": @"Mono", @"colors": @[[UIColor colorWithWhite:0.75 alpha:1]]},
-        @{@"name": @"Ocean", @"key": @"Ocean", @"colors": @[[UIColor colorWithRed:0.0 green:0.5 blue:0.85 alpha:1]]},
+        @{@"name": @"Ocean", @"key": @"Ocean", @"colors": @[
+            [UIColor colorWithRed:0.0 green:0.5 blue:0.85 alpha:1],
+            [UIColor colorWithRed:0.0 green:0.3 blue:0.65 alpha:1]]},
         @{@"name": @"Forest", @"key": @"Forest", @"colors": @[[UIColor colorWithRed:0.15 green:0.55 blue:0.35 alpha:1]]},
-        @{@"name": @"Candy", @"key": @"Candy", @"colors": @[[UIColor colorWithRed:0.95 green:0.45 blue:0.75 alpha:1]]},
+        @{@"name": @"Candy", @"key": @"Candy", @"colors": @[
+            [UIColor colorWithRed:0.95 green:0.45 blue:0.75 alpha:1],
+            [UIColor colorWithRed:0.75 green:0.25 blue:0.85 alpha:1]]},
         @{@"name": @"Gold", @"key": @"Gold", @"colors": @[[UIColor colorWithRed:0.95 green:0.75 blue:0.25 alpha:1]]},
         @{@"name": @"Blood", @"key": @"Blood", @"colors": @[[UIColor colorWithRed:0.85 green:0.1 blue:0.15 alpha:1]]},
+        @{@"name": @"Neon", @"key": @"Neon", @"colors": @[
+            [UIColor colorWithRed:0.15 green:1.0 blue:0.75 alpha:1],
+            [UIColor colorWithRed:0.0 green:0.85 blue:1.0 alpha:1]]},
+        @{@"name": @"Vinyl", @"key": @"Vinyl", @"colors": @[[UIColor colorWithWhite:0.18 alpha:1]]},
+        @{@"name": @"Fire", @"key": @"Fire", @"colors": @[
+            [UIColor colorWithRed:1.0 green:0.6 blue:0.0 alpha:1],
+            [UIColor colorWithRed:0.95 green:0.15 blue:0.1 alpha:1]]},
+        @{@"name": @"Grape", @"key": @"Grape", @"colors": @[[UIColor colorWithRed:0.55 green:0.2 blue:0.75 alpha:1]]},
+        @{@"name": @"Moss", @"key": @"Moss", @"colors": @[[UIColor colorWithRed:0.4 green:0.55 blue:0.25 alpha:1]]},
     ];
 }
 

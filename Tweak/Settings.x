@@ -108,15 +108,17 @@ static NeedleRow *_NeedleRowWithSubtitle(NeedleRow *r, NSString *sub) {
 @implementation NeedleHeroView
 @end
 
-@interface NeedleSettingsViewController : UIViewController <UITableViewDataSource, UITableViewDelegate, UITextFieldDelegate>
+@interface NeedleSettingsViewController : UIViewController <UITableViewDataSource, UITableViewDelegate, UITextFieldDelegate, UISearchBarDelegate>
 @property (nonatomic, strong) UITableView *table;
 @property (nonatomic, strong) NSArray<NeedleSection *> *sections;
+@property (nonatomic, strong) NSArray<NeedleSection *> *allSections;
 @property (nonatomic, strong) CAGradientLayer *bgLayer;
 @property (nonatomic, strong) NeedleHeroView *hero;
+@property (nonatomic, strong) UISearchBar *searchBar;
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.29";
+    return @"2.30";
 }
 
 @implementation NeedleSettingsViewController
@@ -163,7 +165,68 @@ static NSString *_NeedleVersionTag(void) {
     [self.view addSubview:self.table];
 
     self.hero = [self buildHero:w];
-    self.table.tableHeaderView = self.hero;
+
+    CGFloat searchH = 54;
+    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, self.hero.frame.size.height + searchH + 10)];
+    [header addSubview:self.hero];
+
+    self.searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(10, self.hero.frame.size.height + 4, w - 20, searchH)];
+    self.searchBar.placeholder = @"Search Needle";
+    self.searchBar.searchBarStyle = UISearchBarStyleMinimal;
+    self.searchBar.tintColor = NeedleCurrentColor();
+    self.searchBar.delegate = self;
+    self.searchBar.backgroundColor = [UIColor clearColor];
+    UITextField *searchField = [self.searchBar valueForKey:@"searchField"];
+    if ([searchField isKindOfClass:[UITextField class]]) {
+        searchField.backgroundColor = [UIColor colorWithWhite:1 alpha:0.09];
+        searchField.textColor = [UIColor whiteColor];
+        searchField.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
+        searchField.layer.cornerRadius = 14;
+        searchField.layer.masksToBounds = YES;
+        searchField.attributedPlaceholder = [[NSAttributedString alloc]
+            initWithString:@"Search Needle"
+            attributes:@{NSForegroundColorAttributeName: [UIColor colorWithWhite:1 alpha:0.42]}];
+        UIImageView *leftIcon = (UIImageView *)searchField.leftView;
+        if ([leftIcon isKindOfClass:[UIImageView class]]) leftIcon.tintColor = [UIColor colorWithWhite:1 alpha:0.42];
+    }
+    [header addSubview:self.searchBar];
+
+    self.table.tableHeaderView = header;
+}
+
+- (void)searchBar:(UISearchBar *)sb textDidChange:(NSString *)text {
+    NSString *q = [[text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]] lowercaseString];
+    if (!q.length) {
+        self.sections = self.allSections;
+        [self.table reloadData];
+        return;
+    }
+    NSMutableArray *filtered = [NSMutableArray new];
+    for (NeedleSection *s in self.allSections) {
+        NSMutableArray *keep = [NSMutableArray new];
+        BOOL titleMatch = [[s.title.lowercaseString ?: @""] containsString:q];
+        for (NeedleRow *r in s.rows) {
+            NSString *l = r.label.lowercaseString ?: @"";
+            NSString *sub = r.subtitle.lowercaseString ?: @"";
+            if (titleMatch || [l containsString:q] || [sub containsString:q]) [keep addObject:r];
+        }
+        if (keep.count) {
+            NeedleSection *copy = [NeedleSection new];
+            copy.title = s.title;
+            copy.footer = s.footer;
+            copy.rows = keep;
+            [filtered addObject:copy];
+        }
+    }
+    self.sections = filtered;
+    [self.table reloadData];
+}
+
+- (void)searchBarSearchButtonClicked:(UISearchBar *)sb { [sb resignFirstResponder]; }
+- (void)searchBarCancelButtonClicked:(UISearchBar *)sb {
+    sb.text = @"";
+    [self searchBar:sb textDidChange:@""];
+    [sb resignFirstResponder];
 }
 
 - (NeedleHeroView *)buildHero:(CGFloat)w {
@@ -536,6 +599,7 @@ static NSString *_NeedleVersionTag(void) {
     about.footer = [NSString stringWithFormat:@"Needle v%@ running on Spotify %@. Built by Renzo.", _NeedleVersionTag(), spotifyVer];
 
     self.sections = @[discover, playback, look, content, privacy, sleep, you, about];
+    self.allSections = self.sections;
 }
 
 - (void)toast:(NSString *)text {
@@ -1034,6 +1098,24 @@ void NeedleOpenSettings(void) {
 @interface SPTNowPlayingBar : UIView
 @end
 
+@interface _NeedleGestureBridge : NSObject <UIGestureRecognizerDelegate>
++ (instancetype)shared;
+@end
+@implementation _NeedleGestureBridge
++ (instancetype)shared {
+    static _NeedleGestureBridge *s;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ s = [self new]; });
+    return s;
+}
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)g shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)other {
+    return YES;
+}
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)g shouldReceiveTouch:(UITouch *)touch {
+    return YES;
+}
+@end
+
 static void _NeedleAttachLongPress(UIView *view) {
     if (!view) return;
     static char _lpKey;
@@ -1041,13 +1123,38 @@ static void _NeedleAttachLongPress(UIView *view) {
     UILongPressGestureRecognizer *lp = [[UILongPressGestureRecognizer alloc]
         initWithTarget:[NeedleSettingsViewController class]
         action:@selector(_needleLongPress:)];
-    lp.minimumPressDuration = 0.6;
+    lp.minimumPressDuration = 0.45;
     lp.cancelsTouchesInView = NO;
+    lp.delaysTouchesBegan = NO;
+    lp.delaysTouchesEnded = NO;
+    lp.delegate = [_NeedleGestureBridge shared];
     [view addGestureRecognizer:lp];
     objc_setAssociatedObject(view, &_lpKey, lp, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+
+    static char _tpKey;
+    if (objc_getAssociatedObject(view, &_tpKey)) return;
+    UITapGestureRecognizer *triple = [[UITapGestureRecognizer alloc]
+        initWithTarget:[NeedleSettingsViewController class]
+        action:@selector(_needleTripleTap:)];
+    triple.numberOfTapsRequired = 3;
+    triple.cancelsTouchesInView = NO;
+    triple.delegate = [_NeedleGestureBridge shared];
+    [view addGestureRecognizer:triple];
+    objc_setAssociatedObject(view, &_tpKey, triple, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
+@interface SPTNowPlayingView : UIView
+@end
+
 %hook SPTNowPlayingBar
+- (void)didMoveToWindow {
+    %orig;
+    if (!self.window) return;
+    _NeedleAttachLongPress(self);
+}
+%end
+
+%hook SPTNowPlayingView
 - (void)didMoveToWindow {
     %orig;
     if (!self.window) return;
