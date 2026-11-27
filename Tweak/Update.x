@@ -4,15 +4,13 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.22.0";
+static NSString *const NeedleCurrentVersion = @"2.23.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Settings redesigned as rounded card groups with a short subtitle under each row explaining what it does, Regram style.\n"
-           "New About section at the bottom: Needle version, Spotify version, bundle id, GitHub link, check for updates, what's new.\n"
-           "New Privacy section: 'Hide in screen recording' covers Spotify with a black screen whenever the phone is being recorded or mirrored.\n"
-           "Lockscreen tap: hardened the Now Playing hook with PlaybackRate, DefaultPlaybackRate and IsLiveStream so iOS has more reason to route taps back into Spotify. Can't force iOS past its own default-music-app setting.";
+    return @"Hide in captures reworked (the previous version hid Spotify itself, which is not what you wanted): the Needle floating gear is now wrapped in a UITextField secureTextEntry canvas when the toggle is on, which iOS blanks in screenshots. During screen recording and mirroring, the gear also gets hidden via UIScreenCapturedDidChangeNotification.\n"
+           "Toggle lives at Settings > Privacy > Hide Needle in captures.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
