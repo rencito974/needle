@@ -118,7 +118,7 @@ static NeedleRow *_NeedleRowWithSubtitle(NeedleRow *r, NSString *sub) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.32";
+    return @"2.33";
 }
 
 @implementation NeedleSettingsViewController
@@ -170,7 +170,7 @@ static NSString *_NeedleVersionTag(void) {
     UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, self.hero.frame.size.height + searchH + 10)];
     [header addSubview:self.hero];
 
-    self.searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(10, self.hero.frame.size.height + 4, w - 20, searchH)];
+    self.searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(14, self.hero.frame.size.height + 4, w - 28, searchH)];
     self.searchBar.placeholder = @"Search Needle";
     self.searchBar.searchBarStyle = UISearchBarStyleMinimal;
     self.searchBar.tintColor = NeedleCurrentColor();
@@ -178,16 +178,24 @@ static NSString *_NeedleVersionTag(void) {
     self.searchBar.backgroundColor = [UIColor clearColor];
     UITextField *searchField = [self.searchBar valueForKey:@"searchField"];
     if ([searchField isKindOfClass:[UITextField class]]) {
-        searchField.backgroundColor = [UIColor colorWithWhite:1 alpha:0.09];
+        searchField.backgroundColor = [UIColor colorWithWhite:1 alpha:0.08];
         searchField.textColor = [UIColor whiteColor];
-        searchField.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
-        searchField.layer.cornerRadius = 14;
+        searchField.font = [UIFont systemFontOfSize:15 weight:UIFontWeightSemibold];
+        searchField.layer.cornerRadius = 16;
         searchField.layer.masksToBounds = YES;
+        searchField.layer.borderWidth = 0.5;
+        searchField.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.09].CGColor;
         searchField.attributedPlaceholder = [[NSAttributedString alloc]
             initWithString:@"Search Needle"
-            attributes:@{NSForegroundColorAttributeName: [UIColor colorWithWhite:1 alpha:0.42]}];
+            attributes:@{NSForegroundColorAttributeName: [UIColor colorWithWhite:1 alpha:0.45],
+                         NSFontAttributeName: [UIFont systemFontOfSize:15 weight:UIFontWeightMedium]}];
         UIImageView *leftIcon = (UIImageView *)searchField.leftView;
-        if ([leftIcon isKindOfClass:[UIImageView class]]) leftIcon.tintColor = [UIColor colorWithWhite:1 alpha:0.42];
+        if ([leftIcon isKindOfClass:[UIImageView class]]) {
+            UIImage *mag = [UIImage systemImageNamed:@"magnifyingglass"
+                withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightBold]];
+            leftIcon.image = mag;
+            leftIcon.tintColor = NeedleCurrentColor();
+        }
     }
     [header addSubview:self.searchBar];
 
@@ -605,22 +613,61 @@ static NSString *_NeedleVersionTag(void) {
 
 - (void)toast:(NSString *)text {
     CGFloat w = self.view.bounds.size.width;
-    UIView *toast = [[UIView alloc] initWithFrame:CGRectMake(32, self.view.bounds.size.height - 160, w - 64, 52)];
-    toast.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1];
-    toast.layer.cornerRadius = 18;
-    toast.layer.borderWidth = 0.5;
-    toast.layer.borderColor = [NeedleCurrentColor() colorWithAlphaComponent:0.4].CGColor;
+    CGFloat toastH = 58;
+    CGFloat finalY = self.view.bounds.size.height - 160;
+
+    UIView *toast = [[UIView alloc] initWithFrame:CGRectMake(28, finalY + 20, w - 56, toastH)];
+    toast.backgroundColor = [UIColor clearColor];
+    toast.layer.cornerRadius = 22;
+    toast.layer.shadowColor = [UIColor blackColor].CGColor;
+    toast.layer.shadowOffset = CGSizeMake(0, 10);
+    toast.layer.shadowRadius = 24;
+    toast.layer.shadowOpacity = 0.4;
     toast.alpha = 0;
-    UILabel *lbl = [[UILabel alloc] initWithFrame:toast.bounds];
+
+    UIVisualEffectView *vfx = [[UIVisualEffectView alloc]
+        initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterialDark]];
+    vfx.frame = toast.bounds;
+    vfx.layer.cornerRadius = 22;
+    vfx.layer.masksToBounds = YES;
+    vfx.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [toast addSubview:vfx];
+
+    UIView *tint = [[UIView alloc] initWithFrame:vfx.bounds];
+    tint.backgroundColor = [NeedleCurrentColor() colorWithAlphaComponent:0.14];
+    tint.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [vfx.contentView addSubview:tint];
+
+    UIView *leftBar = [[UIView alloc] initWithFrame:CGRectMake(0, 10, 4, toastH - 20)];
+    leftBar.backgroundColor = NeedleCurrentColor();
+    leftBar.layer.cornerRadius = 2;
+    [vfx.contentView addSubview:leftBar];
+
+    UIImageView *icon = [[UIImageView alloc] initWithImage:
+        [UIImage systemImageNamed:@"checkmark.circle.fill" withConfiguration:
+            [UIImageSymbolConfiguration configurationWithPointSize:20 weight:UIImageSymbolWeightBold]]];
+    icon.tintColor = NeedleCurrentColor();
+    icon.frame = CGRectMake(18, (toastH - 24) / 2, 24, 24);
+    [vfx.contentView addSubview:icon];
+
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(52, 0, toast.bounds.size.width - 68, toastH)];
     lbl.text = text;
     lbl.textColor = [UIColor whiteColor];
-    lbl.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
-    lbl.textAlignment = NSTextAlignmentCenter;
-    [toast addSubview:lbl];
+    lbl.font = [UIFont systemFontOfSize:14 weight:UIFontWeightBold];
+    lbl.textAlignment = NSTextAlignmentLeft;
+    [vfx.contentView addSubview:lbl];
+
     [self.view addSubview:toast];
-    [UIView animateWithDuration:0.22 animations:^{ toast.alpha = 1; }];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [UIView animateWithDuration:0.4 animations:^{ toast.alpha = 0; } completion:^(BOOL f){ [toast removeFromSuperview]; }];
+    [UIView animateWithDuration:0.32 delay:0 usingSpringWithDamping:0.78 initialSpringVelocity:0.9 options:0 animations:^{
+        toast.alpha = 1;
+        toast.frame = CGRectMake(28, finalY, w - 56, toastH);
+    } completion:nil];
+
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [UIView animateWithDuration:0.4 animations:^{
+            toast.alpha = 0;
+            toast.transform = CGAffineTransformMakeTranslation(0, 14);
+        } completion:^(BOOL f){ [toast removeFromSuperview]; }];
     });
 }
 
@@ -835,12 +882,32 @@ static NSString *_NeedleVersionTag(void) {
 }
 
 - (void)tableView:(UITableView *)t willDisplayHeaderView:(UIView *)view forSection:(NSInteger)s {
-    if ([view isKindOfClass:[UITableViewHeaderFooterView class]]) {
-        UITableViewHeaderFooterView *h = (UITableViewHeaderFooterView *)view;
-        h.textLabel.textColor = [UIColor colorWithWhite:1 alpha:0.5];
-        h.textLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
-        h.textLabel.text = self.sections[s].title;
+    if (![view isKindOfClass:[UITableViewHeaderFooterView class]]) return;
+    UITableViewHeaderFooterView *h = (UITableViewHeaderFooterView *)view;
+    NSString *title = self.sections[s].title ?: @"";
+
+    h.textLabel.text = nil;
+    h.textLabel.hidden = YES;
+
+    for (UIView *sub in [h.contentView.subviews copy]) {
+        if (sub.tag == 0x4E484452) [sub removeFromSuperview];
     }
+
+    UIView *accent = [[UIView alloc] initWithFrame:CGRectMake(22, 24, 3, 14)];
+    accent.tag = 0x4E484452;
+    accent.backgroundColor = NeedleCurrentColor();
+    accent.layer.cornerRadius = 1.5;
+    [h.contentView addSubview:accent];
+
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(34, 18, h.contentView.bounds.size.width - 60, 24)];
+    lbl.tag = 0x4E484452;
+    lbl.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    NSMutableAttributedString *a = [[NSMutableAttributedString alloc] initWithString:[title uppercaseString]];
+    [a addAttribute:NSKernAttributeName value:@1.8 range:NSMakeRange(0, a.length)];
+    [a addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:11 weight:UIFontWeightHeavy] range:NSMakeRange(0, a.length)];
+    [a addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithWhite:1 alpha:0.6] range:NSMakeRange(0, a.length)];
+    lbl.attributedText = a;
+    [h.contentView addSubview:lbl];
 }
 
 - (void)tableView:(UITableView *)t willDisplayFooterView:(UIView *)view forSection:(NSInteger)s {
@@ -1223,13 +1290,39 @@ static UIView *_NeedleBuildButton(CGRect frame) {
     [vfx.contentView addSubview:tint];
 
     UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:16 weight:UIImageSymbolWeightBold];
-    UIImage *icon = [UIImage systemImageNamed:@"waveform.circle.fill" withConfiguration:cfg];
+    UIImage *icon = [UIImage systemImageNamed:@"waveform" withConfiguration:cfg];
     UIImageView *iv = [[UIImageView alloc] initWithImage:icon];
     iv.tintColor = [UIColor whiteColor];
     iv.contentMode = UIViewContentModeCenter;
     iv.frame = host.bounds;
     iv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [vfx.contentView addSubview:iv];
+
+    UIView *ring = [[UIView alloc] initWithFrame:host.bounds];
+    ring.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    ring.userInteractionEnabled = NO;
+    ring.layer.cornerRadius = frame.size.width / 2;
+    ring.layer.borderWidth = 1.2;
+    ring.layer.borderColor = [NeedleCurrentColor() colorWithAlphaComponent:0.55].CGColor;
+    [host addSubview:ring];
+
+    CABasicAnimation *breathe = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
+    breathe.fromValue = @1.0;
+    breathe.toValue = @1.22;
+    breathe.duration = 1.6;
+    breathe.autoreverses = YES;
+    breathe.repeatCount = HUGE_VALF;
+    breathe.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+    [ring.layer addAnimation:breathe forKey:@"breathe"];
+
+    CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
+    fade.fromValue = @0.6;
+    fade.toValue = @0.0;
+    fade.duration = 1.6;
+    fade.autoreverses = YES;
+    fade.repeatCount = HUGE_VALF;
+    fade.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+    [ring.layer addAnimation:fade forKey:@"fade"];
 
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]
         initWithTarget:[NeedleSettingsViewController class]

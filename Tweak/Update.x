@@ -4,12 +4,16 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.32.0";
+static NSString *const NeedleCurrentVersion = @"2.33.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Lockscreen tap another attempt: stripped every Needle override of the Now Playing info identifiers. No ExternalContentIdentifier, no ExternalUserProfileIdentifier, no ServiceIdentifier, no AssetURL rewrite. Pair this with the OG bundle build and the real Spotify's own tap-to-open path should be untouched.";
+    return @"Theme grid: bigger cards with full gradient previews, a kind label, concentric rings behind, selected theme shows a white check badge and glows.\n"
+           "Floating gear: an accent ring breathes around the button so it reads as alive instead of a floating dot.\n"
+           "Toast: glass blur, accent bar, check icon, spring slide-up from below instead of the old flat fade.\n"
+           "Section headers in Settings: accent bar beside each title with wide-tracking heavy label.\n"
+           "Search bar: accent magnifier icon and a crisper pill with more depth.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {

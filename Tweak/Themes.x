@@ -115,16 +115,19 @@ UIColor *NeedleThemeOverrideColor(void) {
     [self.view addSubview:sub];
 
     UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
-    CGFloat cellW = (w - 24 * 2 - 16 * 2) / 3;
-    layout.itemSize = CGSizeMake(cellW, cellW + 28);
-    layout.minimumInteritemSpacing = 16;
-    layout.minimumLineSpacing = 20;
-    layout.sectionInset = UIEdgeInsetsMake(20, 24, 40, 24);
+    CGFloat side = 24;
+    CGFloat gap = 18;
+    CGFloat cellW = (w - side * 2 - gap) / 2;
+    layout.itemSize = CGSizeMake(cellW, cellW * 0.78);
+    layout.minimumInteritemSpacing = gap;
+    layout.minimumLineSpacing = gap;
+    layout.sectionInset = UIEdgeInsetsMake(20, side, 60, side);
 
     self.grid = [[UICollectionView alloc] initWithFrame:CGRectMake(0, 130, w, self.view.bounds.size.height - 130) collectionViewLayout:layout];
     self.grid.backgroundColor = [UIColor clearColor];
     self.grid.dataSource = self;
     self.grid.delegate = self;
+    self.grid.showsVerticalScrollIndicator = NO;
     self.grid.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [self.grid registerClass:[UICollectionViewCell class] forCellWithReuseIdentifier:@"t"];
     [self.view addSubview:self.grid];
@@ -137,44 +140,100 @@ UIColor *NeedleThemeOverrideColor(void) {
 - (UICollectionViewCell *)collectionView:(UICollectionView *)v cellForItemAtIndexPath:(NSIndexPath *)ip {
     UICollectionViewCell *cell = [v dequeueReusableCellWithReuseIdentifier:@"t" forIndexPath:ip];
     for (UIView *sub in [cell.contentView.subviews copy]) [sub removeFromSuperview];
+    for (CALayer *l in [cell.contentView.layer.sublayers copy]) [l removeFromSuperlayer];
     NSDictionary *theme = NeedleThemeCatalog()[ip.item];
     CGFloat cellW = cell.bounds.size.width;
+    CGFloat cellH = cell.bounds.size.height;
 
-    UIView *swatch = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cellW, cellW)];
-    swatch.layer.cornerRadius = 20;
-    swatch.layer.masksToBounds = YES;
     NSArray *cols = theme[@"colors"];
-    if (cols.count == 1) {
-        swatch.backgroundColor = cols[0];
-    } else {
-        CAGradientLayer *g = [CAGradientLayer layer];
-        NSMutableArray *cgs = [NSMutableArray new];
-        for (UIColor *c in cols) [cgs addObject:(id)c.CGColor];
-        g.colors = cgs;
-        g.startPoint = CGPointMake(0, 0);
-        g.endPoint = CGPointMake(1, 1);
-        g.frame = swatch.bounds;
-        [swatch.layer addSublayer:g];
+    UIColor *primary = cols.firstObject ?: [UIColor whiteColor];
+    UIColor *secondary = cols.count > 1 ? cols[1] : [primary colorWithAlphaComponent:0.6];
+
+    UIView *card = [[UIView alloc] initWithFrame:cell.bounds];
+    card.layer.cornerRadius = 22;
+    card.layer.masksToBounds = NO;
+    card.backgroundColor = [UIColor colorWithWhite:1 alpha:0.05];
+    card.layer.shadowColor = primary.CGColor;
+    card.layer.shadowOffset = CGSizeMake(0, 10);
+    card.layer.shadowRadius = 22;
+    card.layer.shadowOpacity = 0.35;
+    [cell.contentView addSubview:card];
+
+    UIView *clip = [[UIView alloc] initWithFrame:card.bounds];
+    clip.layer.cornerRadius = 22;
+    clip.layer.masksToBounds = YES;
+    clip.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1];
+    [card addSubview:clip];
+
+    CAGradientLayer *g = [CAGradientLayer layer];
+    g.frame = clip.bounds;
+    g.colors = @[(id)primary.CGColor, (id)secondary.CGColor];
+    g.startPoint = CGPointMake(0, 0);
+    g.endPoint = CGPointMake(1, 1);
+    [clip.layer addSublayer:g];
+
+    for (NSInteger i = 0; i < 4; i++) {
+        CAShapeLayer *ring = [CAShapeLayer layer];
+        CGFloat radius = 24 + i * 22;
+        CGPoint c = CGPointMake(cellW - 36, cellH - 22);
+        UIBezierPath *p = [UIBezierPath bezierPathWithArcCenter:c radius:radius startAngle:0 endAngle:2 * M_PI clockwise:YES];
+        ring.path = p.CGPath;
+        ring.fillColor = [UIColor clearColor].CGColor;
+        ring.strokeColor = [UIColor colorWithWhite:1 alpha:0.14].CGColor;
+        ring.lineWidth = 1.0;
+        [clip.layer addSublayer:ring];
     }
-    swatch.layer.shadowColor = ((UIColor *)cols.firstObject).CGColor;
-    swatch.layer.shadowOffset = CGSizeMake(0, 6);
-    swatch.layer.shadowRadius = 14;
-    swatch.layer.shadowOpacity = 0.4;
-    swatch.layer.masksToBounds = NO;
+
+    UIView *dot = [[UIView alloc] initWithFrame:CGRectMake(cellW - 40, cellH - 26, 8, 8)];
+    dot.backgroundColor = [UIColor whiteColor];
+    dot.layer.cornerRadius = 4;
+    [clip addSubview:dot];
+
+    UILabel *name = [[UILabel alloc] initWithFrame:CGRectMake(16, cellH - 50, cellW - 32, 24)];
+    name.text = theme[@"name"];
+    name.textColor = [UIColor whiteColor];
+    name.font = [UIFont systemFontOfSize:17 weight:UIFontWeightBold];
+    [clip addSubview:name];
+
+    NSString *tag;
+    if (cols.count > 1) tag = @"Gradient";
+    else if ([theme[@"key"] isEqualToString:@""]) tag = @"From album";
+    else tag = @"Solid";
+    UILabel *sub = [[UILabel alloc] initWithFrame:CGRectMake(16, cellH - 28, cellW - 32, 14)];
+    NSMutableAttributedString *a = [[NSMutableAttributedString alloc] initWithString:[tag uppercaseString]];
+    [a addAttribute:NSKernAttributeName value:@1.4 range:NSMakeRange(0, a.length)];
+    [a addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithWhite:1 alpha:0.7] range:NSMakeRange(0, a.length)];
+    [a addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:9 weight:UIFontWeightHeavy] range:NSMakeRange(0, a.length)];
+    sub.attributedText = a;
+    [clip addSubview:sub];
 
     NSString *currentKey = NeedlePrefString(@"ThemeKey") ?: @"";
     if ([currentKey isEqualToString:theme[@"key"]]) {
-        swatch.layer.borderWidth = 3;
-        swatch.layer.borderColor = [UIColor whiteColor].CGColor;
-    }
-    [cell.contentView addSubview:swatch];
+        card.layer.borderWidth = 2;
+        card.layer.borderColor = [UIColor whiteColor].CGColor;
+        card.layer.shadowOpacity = 0.8;
+        card.layer.shadowRadius = 28;
 
-    UILabel *l = [[UILabel alloc] initWithFrame:CGRectMake(0, cellW + 8, cellW, 20)];
-    l.text = theme[@"name"];
-    l.textColor = [UIColor whiteColor];
-    l.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
-    l.textAlignment = NSTextAlignmentCenter;
-    [cell.contentView addSubview:l];
+        UIView *badge = [[UIView alloc] initWithFrame:CGRectMake(cellW - 40, 16, 28, 28)];
+        badge.backgroundColor = [UIColor whiteColor];
+        badge.layer.cornerRadius = 14;
+        UIImageView *check = [[UIImageView alloc] initWithImage:
+            [UIImage systemImageNamed:@"checkmark" withConfiguration:
+                [UIImageSymbolConfiguration configurationWithPointSize:13 weight:UIImageSymbolWeightHeavy]]];
+        check.tintColor = primary;
+        check.contentMode = UIViewContentModeCenter;
+        check.frame = badge.bounds;
+        [badge addSubview:check];
+        [clip addSubview:badge];
+    }
+
+    cell.contentView.transform = CGAffineTransformMakeScale(0.94, 0.94);
+    cell.contentView.alpha = 0;
+    [UIView animateWithDuration:0.4 delay:ip.item * 0.03 usingSpringWithDamping:0.85 initialSpringVelocity:0.6 options:0 animations:^{
+        cell.contentView.transform = CGAffineTransformIdentity;
+        cell.contentView.alpha = 1;
+    } completion:nil];
+
     return cell;
 }
 
