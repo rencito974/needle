@@ -3,7 +3,7 @@
 #import <AudioToolbox/AudioToolbox.h>
 #import <objc/runtime.h>
 #import <dlfcn.h>
-#import <substrate.h>
+#import "fishhook/fishhook.h"
 
 extern BOOL NeedlePrefBool(NSString *key, BOOL def);
 extern float NeedlePrefFloat(NSString *key, float def);
@@ -125,6 +125,7 @@ static const char *kNeedleNaturalVolKey = "_needleNaturalVol";
 typedef OSStatus (*ausp_fn_t)(AudioUnit, AudioUnitParameterID, AudioUnitScope, AudioUnitElement, AudioUnitParameterValue, UInt32);
 static ausp_fn_t _needle_orig_ausp = NULL;
 static volatile BOOL _needle_ausp_installed = NO;
+static volatile BOOL _needle_user_armed = NO;
 
 static OSStatus _needle_hook_ausp(AudioUnit inUnit, AudioUnitParameterID inID, AudioUnitScope inScope, AudioUnitElement inElement, AudioUnitParameterValue inValue, UInt32 inBufferOffsetInFrames) {
     ausp_fn_t o = _needle_orig_ausp;
@@ -171,21 +172,20 @@ static void _NeedleReapplyBoost(void) {
 
 static void _NeedleInstallAuspHook(void) {
     if (_needle_ausp_installed) return;
+    if (!_needle_user_armed) return;
     if (NeedlePrefFloat(@"VolumeBoostAmount", 1.0f) <= 1.01f) return;
     @try {
-        void *handle = dlopen("/System/Library/Frameworks/AudioToolbox.framework/AudioToolbox", RTLD_NOW);
-        if (!handle) return;
-        void *sym = dlsym(handle, "AudioUnitSetParameter");
-        if (!sym) return;
-        MSHookFunction(sym, (void *)_needle_hook_ausp, (void **)&_needle_orig_ausp);
-        _needle_ausp_installed = YES;
+        struct rebinding r;
+        r.name = "AudioUnitSetParameter";
+        r.replacement = (void *)_needle_hook_ausp;
+        r.replaced = (void **)&_needle_orig_ausp;
+        if (rebind_symbols((struct rebinding[1]){r}, 1) == 0) {
+            _needle_ausp_installed = YES;
+        }
     } @catch (NSException *e) {}
 }
 
 %ctor {
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(12 * NSEC_PER_SEC)), dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0), ^{
-        _NeedleInstallAuspHook();
-    });
     [[NSNotificationCenter defaultCenter] addObserverForName:@"NeedlePrefsChanged"
         object:nil
         queue:[NSOperationQueue mainQueue]
@@ -193,6 +193,7 @@ static void _NeedleInstallAuspHook(void) {
             NSString *key = n.object;
             if (![key isKindOfClass:[NSString class]]) return;
             if ([key isEqualToString:@"VolumeBoostAmount"]) {
+                _needle_user_armed = YES;
                 _NeedleReapplyBoost();
                 dispatch_async(dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0), ^{ _NeedleInstallAuspHook(); });
             }
