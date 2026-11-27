@@ -4,14 +4,15 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.21.0";
+static NSString *const NeedleCurrentVersion = @"2.22.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"One floating button now, not three. Tap opens a Needle menu (QR share, Rate song, Settings). Long press opens Settings directly.\n"
-           "Button is smaller (36pt instead of 42pt) and sits 80pt below the safe area so it no longer sits on top of Spotify's filter chips.\n"
-           "Volume boost now also hooks AudioUnitSetParameter at the C level, which is the path Spotify's CoreAudio pipeline actually goes through. The slider should affect real output now, not just the AVFoundation-only paths.";
+    return @"Settings redesigned as rounded card groups with a short subtitle under each row explaining what it does, Regram style.\n"
+           "New About section at the bottom: Needle version, Spotify version, bundle id, GitHub link, check for updates, what's new.\n"
+           "New Privacy section: 'Hide in screen recording' covers Spotify with a black screen whenever the phone is being recorded or mirrored.\n"
+           "Lockscreen tap: hardened the Now Playing hook with PlaybackRate, DefaultPlaybackRate and IsLiveStream so iOS has more reason to route taps back into Spotify. Can't force iOS past its own default-music-app setting.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
