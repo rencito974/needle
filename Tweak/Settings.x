@@ -118,7 +118,7 @@ static NeedleRow *_NeedleRowWithSubtitle(NeedleRow *r, NSString *sub) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.31";
+    return @"2.32";
 }
 
 @implementation NeedleSettingsViewController
