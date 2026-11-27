@@ -204,7 +204,8 @@ static NSString *_NeedleVersionTag(void) {
     NSMutableArray *filtered = [NSMutableArray new];
     for (NeedleSection *s in self.allSections) {
         NSMutableArray *keep = [NSMutableArray new];
-        BOOL titleMatch = [[s.title.lowercaseString ?: @""] containsString:q];
+        NSString *stitle = s.title.lowercaseString ?: @"";
+        BOOL titleMatch = [stitle containsString:q];
         for (NeedleRow *r in s.rows) {
             NSString *l = r.label.lowercaseString ?: @"";
             NSString *sub = r.subtitle.lowercaseString ?: @"";
