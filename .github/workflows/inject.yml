@@ -63,6 +63,7 @@ jobs:
           ls -la Needle-Spotify.ipa
 
       - name: Patch alternate icons into IPA
+        if: false
         run: |
           pip3 install Pillow numpy
           python3 .github/scripts/patch_icons.py work/Needle-Spotify.ipa
