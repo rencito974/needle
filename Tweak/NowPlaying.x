@@ -7,11 +7,12 @@ extern NSMutableDictionary *_needleCurrentTrackCache;
 %hook MPNowPlayingInfoCenter
 - (void)setNowPlayingInfo:(NSDictionary *)info {
     NSMutableDictionary *m = [info mutableCopy] ?: [NSMutableDictionary new];
+    NSString *selfBundle = [[NSBundle mainBundle] bundleIdentifier] ?: @"com.spotify.client";
     if (!m[@"ExternalContentIdentifier"]) {
-        m[@"ExternalContentIdentifier"] = @"com.spotify.client";
+        m[@"ExternalContentIdentifier"] = selfBundle;
     }
     if (!m[@"MPNowPlayingInfoPropertyExternalUserProfileIdentifier"]) {
-        m[@"MPNowPlayingInfoPropertyExternalUserProfileIdentifier"] = @"com.spotify.client";
+        m[@"MPNowPlayingInfoPropertyExternalUserProfileIdentifier"] = selfBundle;
     }
     id artwork = info[MPMediaItemPropertyArtwork];
     if ([artwork isKindOfClass:NSClassFromString(@"MPMediaItemArtwork")]) {

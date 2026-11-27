@@ -43,7 +43,8 @@ static NSDictionary *NeedleEnrichNowPlaying(NSDictionary *info) {
             mut[MPMediaItemPropertyArtwork] = fresh;
         }
     }
-    mut[@"MPNowPlayingInfoPropertyServiceIdentifier"] = @"com.apple.Music";
+    NSString *selfBundle = [[NSBundle mainBundle] bundleIdentifier] ?: @"com.spotify.client";
+    mut[@"MPNowPlayingInfoPropertyServiceIdentifier"] = selfBundle;
     mut[MPNowPlayingInfoPropertyMediaType] = @(MPNowPlayingInfoMediaTypeAudio);
     mut[@"artworkDataWidth"] = @3000;
     mut[@"artworkDataHeight"] = @3000;

@@ -4,16 +4,13 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.28.0";
+static NSString *const NeedleCurrentVersion = @"2.29.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Gear menu: tap the floating button for a soft popover with icon circles instead of the old action sheet.\n"
-           "Hide floating gear: new toggle in Look; the top-right gear goes away and long-pressing the now-playing bar opens Needle.\n"
-           "Gear auto-hides in Needle: whenever any Needle screen is up the floating buttons step out of the way.\n"
-           "Recognize redesigned: ripple rings, a glowing core, a real audio level meter on the waveform bars, and a dot cycle so you know it's actually listening.\n"
-           "What's new sheet rebuilt: per-row icons, headline with supporting line, animated hero and glowing continue button.";
+    return @"Lockscreen tap fixed: was pointing iOS at com.apple.Music, now points at the real bundle so tapping the lockscreen player opens Spotify again.\n"
+           "External identifiers: also now reflect the resigned bundle instead of a hard-coded com.spotify.client.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {
