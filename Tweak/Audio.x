@@ -1,5 +1,6 @@
 #import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
+#import <AudioToolbox/AudioToolbox.h>
 #import <objc/runtime.h>
 
 extern BOOL NeedlePrefBool(NSString *key, BOOL def);
@@ -186,6 +187,19 @@ static void _NeedleReapplyBoost(void) {
             p.volume = v * b;
         } @catch (NSException *e) {}
     }
+}
+
+%hookf(OSStatus, AudioUnitSetParameter, AudioUnit inUnit, AudioUnitParameterID inID, AudioUnitScope inScope, AudioUnitElement inElement, AudioUnitParameterValue inValue, UInt32 inBufferOffsetInFrames) {
+    if (inID == 0 && inValue > 0.001f && inValue <= 1.0f) {
+        float b = _NeedleBoost();
+        if (b > 1.01f) {
+            inValue = inValue * b;
+            if (inValue > 4.0f) inValue = 4.0f;
+        } else if (b < 0.99f) {
+            inValue = inValue * b;
+        }
+    }
+    return %orig(inUnit, inID, inScope, inElement, inValue, inBufferOffsetInFrames);
 }
 
 %ctor {

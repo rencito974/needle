@@ -4,15 +4,14 @@ extern NSString *NeedlePrefString(NSString *key);
 extern void NeedlePrefSetString(NSString *key, NSString *val);
 extern UIColor *NeedleCurrentColor(void);
 
-static NSString *const NeedleCurrentVersion = @"2.20.0";
+static NSString *const NeedleCurrentVersion = @"2.21.0";
 static NSString *const NeedleReleasesAPI = @"https://api.github.com/repos/rencito974/needle/releases/latest";
 static NSString *const NeedleIPADownload = @"https://github.com/rencito974/needle/releases/download/latest/Needle-Spotify.ipa";
 
 static NSString *NeedleBundledChangelog(void) {
-    return @"Volume boost reworked: Needle now hooks every AVFoundation volume setter (AVAudioMixerNode, AVPlayer, AVAudioPlayer) so whichever audio path Spotify uses, the slider actually applies.\n"
-           "Moving the slider now re-applies the boost to the already playing session, no song skip needed.\n"
-           "If a track still sounds unchanged at 2x+, your system volume is at the cap already; raise the phone volume to 100 percent and the boost has room to grow.\n"
-           "Consolidated build: cache persistence, Car mode, hide tabs, lyric artwork pulse, floating gear + QR + Rating all in one place.";
+    return @"One floating button now, not three. Tap opens a Needle menu (QR share, Rate song, Settings). Long press opens Settings directly.\n"
+           "Button is smaller (36pt instead of 42pt) and sits 80pt below the safe area so it no longer sits on top of Spotify's filter chips.\n"
+           "Volume boost now also hooks AudioUnitSetParameter at the C level, which is the path Spotify's CoreAudio pipeline actually goes through. The slider should affect real output now, not just the AVFoundation-only paths.";
 }
 
 static UIViewController *_NeedleTopVisibleVC(void) {

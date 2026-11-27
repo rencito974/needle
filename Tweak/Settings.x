@@ -96,7 +96,7 @@ typedef NS_ENUM(NSInteger, NeedleRowKind) {
 @end
 
 static NSString *_NeedleVersionTag(void) {
-    return @"2.20";
+    return @"2.21";
 }
 
 @implementation NeedleSettingsViewController
@@ -766,20 +766,42 @@ static NSString *_NeedleVersionTag(void) {
 + (void)_needleGearTap:(UITapGestureRecognizer *)g {
     UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
     [fb impactOccurred];
-    extern void NeedleOpenSettings(void);
-    NeedleOpenSettings();
+
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:@"Needle" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+
+    BOOL trackCached = (_needleCurrentTrackCache[@"name"] != nil) && [_needleCurrentTrackCache[@"name"] length] > 0;
+
+    if (trackCached) {
+        [sheet addAction:[UIAlertAction actionWithTitle:@"QR share this song" style:UIAlertActionStyleDefault handler:^(UIAlertAction *_){
+            extern void NeedleOpenQRShare(void);
+            NeedleOpenQRShare();
+        }]];
+        [sheet addAction:[UIAlertAction actionWithTitle:@"Rate this song" style:UIAlertActionStyleDefault handler:^(UIAlertAction *_){
+            extern void NeedleOpenRating(void);
+            NeedleOpenRating();
+        }]];
+    }
+    [sheet addAction:[UIAlertAction actionWithTitle:@"Open Settings" style:UIAlertActionStyleDefault handler:^(UIAlertAction *_){
+        extern void NeedleOpenSettings(void);
+        NeedleOpenSettings();
+    }]];
+    [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+
+    if (sheet.popoverPresentationController) {
+        sheet.popoverPresentationController.sourceView = g.view;
+        sheet.popoverPresentationController.sourceRect = g.view.bounds;
+    }
+
+    UIViewController *top = _NeedleTopVC();
+    if (top) [top presentViewController:sheet animated:YES completion:nil];
 }
 
 + (void)_needleQRFloatTap:(UITapGestureRecognizer *)g {
-    UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
-    [fb impactOccurred];
     extern void NeedleOpenQRShare(void);
     NeedleOpenQRShare();
 }
 
 + (void)_needleRatingFloatTap:(UITapGestureRecognizer *)g {
-    UIImpactFeedbackGenerator *fb = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
-    [fb impactOccurred];
     extern void NeedleOpenRating(void);
     NeedleOpenRating();
 }
@@ -871,14 +893,14 @@ void NeedleHideFloatingButton(void) {
 void NeedleShowFloatingButton(void) {
     _needleFloatingHidden = NO;
     if (_needleFloatingHost) _needleFloatingHost.hidden = NO;
-    if (_needleFloatingQR) _needleFloatingQR.hidden = !_NeedleTrackIsCached();
-    if (_needleFloatingRating) _needleFloatingRating.hidden = !_NeedleTrackIsCached();
+    if (_needleFloatingQR) _needleFloatingQR.hidden = YES;
+    if (_needleFloatingRating) _needleFloatingRating.hidden = YES;
 }
 
 void _NeedleSyncGearVisibility(void) {
     if (_needleFloatingHost) _needleFloatingHost.hidden = _needleFloatingHidden;
-    if (_needleFloatingQR) _needleFloatingQR.hidden = _needleFloatingHidden || !_NeedleTrackIsCached();
-    if (_needleFloatingRating) _needleFloatingRating.hidden = _needleFloatingHidden || !_NeedleTrackIsCached();
+    if (_needleFloatingQR) _needleFloatingQR.hidden = YES;
+    if (_needleFloatingRating) _needleFloatingRating.hidden = YES;
 }
 
 static UIView *_NeedleBuildButton(CGRect frame) {
@@ -910,8 +932,8 @@ static UIView *_NeedleBuildButton(CGRect frame) {
     tint.layer.cornerRadius = frame.size.width / 2;
     [vfx.contentView addSubview:tint];
 
-    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:19 weight:UIImageSymbolWeightSemibold];
-    UIImage *icon = [UIImage systemImageNamed:@"gearshape.fill" withConfiguration:cfg];
+    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:16 weight:UIImageSymbolWeightBold];
+    UIImage *icon = [UIImage systemImageNamed:@"waveform.circle.fill" withConfiguration:cfg];
     UIImageView *iv = [[UIImageView alloc] initWithImage:icon];
     iv.tintColor = [UIColor whiteColor];
     iv.contentMode = UIViewContentModeCenter;
@@ -923,6 +945,12 @@ static UIView *_NeedleBuildButton(CGRect frame) {
         initWithTarget:[NeedleSettingsViewController class]
         action:@selector(_needleGearTap:)];
     [host addGestureRecognizer:tap];
+
+    UILongPressGestureRecognizer *lp = [[UILongPressGestureRecognizer alloc]
+        initWithTarget:[NeedleSettingsViewController class]
+        action:@selector(_needleLongPress:)];
+    lp.minimumPressDuration = 0.4;
+    [host addGestureRecognizer:lp];
 
     UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc]
         initWithTarget:[NeedleSettingsViewController class]
@@ -952,8 +980,10 @@ void NeedleInstallFloatingButton(void) {
     }
     if (_needleFloatingHost) [_needleFloatingHost removeFromSuperview];
 
-    CGFloat btnSize = 42;
-    CGRect frame = CGRectMake(target.bounds.size.width - btnSize - 16, 68, btnSize, btnSize);
+    CGFloat btnSize = 36;
+    CGFloat topInset = target.safeAreaInsets.top > 0 ? target.safeAreaInsets.top : 60;
+    CGFloat y = topInset + 80;
+    CGRect frame = CGRectMake(target.bounds.size.width - btnSize - 14, y, btnSize, btnSize);
     _needleFloatingHost = _NeedleBuildButton(frame);
     _needleFloatingHost.hidden = _needleFloatingHidden;
     [target addSubview:_needleFloatingHost];
@@ -1000,35 +1030,10 @@ static UIView *_NeedleBuildQRFloat(CGRect frame) {
 }
 
 void NeedleInstallFloatingQR(void) {
-    UIWindow *target = nil;
-    NSArray *scenes = [[UIApplication sharedApplication].connectedScenes allObjects];
-    for (UIScene *s in scenes) {
-        if ([s isKindOfClass:[UIWindowScene class]] && s.activationState == UISceneActivationStateForegroundActive) {
-            UIWindowScene *ws = (UIWindowScene *)s;
-            for (UIWindow *w in ws.windows) {
-                if (w.isKeyWindow) { target = w; break; }
-            }
-            if (!target && ws.windows.count) target = ws.windows.firstObject;
-            if (target) break;
-        }
+    if (_needleFloatingQR) {
+        [_needleFloatingQR removeFromSuperview];
+        _needleFloatingQR = nil;
     }
-    if (!target) return;
-
-    BOOL show = _NeedleTrackIsCached() && !_needleFloatingHidden;
-
-    if (_needleFloatingQR && _needleFloatingQR.superview == target) {
-        _needleFloatingQR.hidden = !show;
-        [target bringSubviewToFront:_needleFloatingQR];
-        return;
-    }
-    if (_needleFloatingQR) [_needleFloatingQR removeFromSuperview];
-
-    CGFloat btnSize = 42;
-    CGRect frame = CGRectMake(target.bounds.size.width - btnSize - 16 - btnSize - 10, 68, btnSize, btnSize);
-    _needleFloatingQR = _NeedleBuildQRFloat(frame);
-    _needleFloatingQR.hidden = !show;
-    [target addSubview:_needleFloatingQR];
-    [target bringSubviewToFront:_needleFloatingQR];
 }
 
 static UIView *_NeedleBuildRatingFloat(CGRect frame) {
@@ -1072,35 +1077,10 @@ static UIView *_NeedleBuildRatingFloat(CGRect frame) {
 }
 
 void NeedleInstallFloatingRating(void) {
-    UIWindow *target = nil;
-    NSArray *scenes = [[UIApplication sharedApplication].connectedScenes allObjects];
-    for (UIScene *s in scenes) {
-        if ([s isKindOfClass:[UIWindowScene class]] && s.activationState == UISceneActivationStateForegroundActive) {
-            UIWindowScene *ws = (UIWindowScene *)s;
-            for (UIWindow *w in ws.windows) {
-                if (w.isKeyWindow) { target = w; break; }
-            }
-            if (!target && ws.windows.count) target = ws.windows.firstObject;
-            if (target) break;
-        }
+    if (_needleFloatingRating) {
+        [_needleFloatingRating removeFromSuperview];
+        _needleFloatingRating = nil;
     }
-    if (!target) return;
-
-    BOOL show = _NeedleTrackIsCached() && !_needleFloatingHidden;
-
-    if (_needleFloatingRating && _needleFloatingRating.superview == target) {
-        _needleFloatingRating.hidden = !show;
-        [target bringSubviewToFront:_needleFloatingRating];
-        return;
-    }
-    if (_needleFloatingRating) [_needleFloatingRating removeFromSuperview];
-
-    CGFloat btnSize = 42;
-    CGRect frame = CGRectMake(target.bounds.size.width - btnSize - 16 - (btnSize + 10) * 2, 68, btnSize, btnSize);
-    _needleFloatingRating = _NeedleBuildRatingFloat(frame);
-    _needleFloatingRating.hidden = !show;
-    [target addSubview:_needleFloatingRating];
-    [target bringSubviewToFront:_needleFloatingRating];
 }
 
 void _NeedleReflowFloatsImpl(UIWindow *w) {
