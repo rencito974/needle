@@ -881,6 +881,7 @@ static UIView *_needleFloatingQR = nil;
 static UIView *_needleFloatingRating = nil;
 static BOOL _needleFloatingHidden = NO;
 
+__attribute__((unused))
 static BOOL _NeedleTrackIsCached(void) {
     return (_needleCurrentTrackCache[@"name"] != nil) && [_needleCurrentTrackCache[@"name"] length] > 0;
 }
@@ -999,6 +1000,7 @@ void NeedleInstallFloatingButton(void) {
     [_needleFloatingHost.layer addAnimation:pulse forKey:@"spawn"];
 }
 
+__attribute__((unused))
 static UIView *_NeedleBuildQRFloat(CGRect frame) {
     UIView *host = [[UIView alloc] initWithFrame:frame];
     host.backgroundColor = [UIColor clearColor];
@@ -1038,6 +1040,7 @@ void NeedleInstallFloatingQR(void) {
     }
 }
 
+__attribute__((unused))
 static UIView *_NeedleBuildRatingFloat(CGRect frame) {
     UIView *host = [[UIView alloc] initWithFrame:frame];
     host.backgroundColor = [UIColor clearColor];
