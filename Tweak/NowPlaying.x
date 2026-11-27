@@ -14,6 +14,9 @@ extern NSMutableDictionary *_needleCurrentTrackCache;
     if (!m[@"MPNowPlayingInfoPropertyExternalUserProfileIdentifier"]) {
         m[@"MPNowPlayingInfoPropertyExternalUserProfileIdentifier"] = selfBundle;
     }
+    if (!m[MPNowPlayingInfoPropertyAssetURL]) {
+        m[MPNowPlayingInfoPropertyAssetURL] = [NSURL URLWithString:@"spotify://"];
+    }
     id artwork = info[MPMediaItemPropertyArtwork];
     if ([artwork isKindOfClass:NSClassFromString(@"MPMediaItemArtwork")]) {
         @try {
